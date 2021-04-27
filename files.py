@@ -286,7 +286,7 @@ def openListDir(dirPath, main_ui):
         modelFiles = main_ui.listFiles.model()
         if not modelFiles:
             modelFiles = FSM(parent=main_ui)
-            modelFiles.setIconProvider(IconProvider())
+            # modelFiles.setIconProvider(IconProvider())
             main_ui.listFiles.setModel(modelFiles)
         modelFiles.setRootPath(CUR_DIR_SELECTED)
         # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
@@ -304,7 +304,7 @@ def openIconDir(dirPath, main_ui):
     modelFiles = main_ui.iconFiles.model()
     if not modelFiles:
         modelFiles = FSM4Files(parent=main_ui)
-        modelFiles.setIconProvider(IconProvider())
+        # modelFiles.setIconProvider(IconProvider())
         main_ui.iconFiles.setModel(modelFiles)
     modelFiles.setRootPath(CUR_DIR_SELECTED)
     # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
