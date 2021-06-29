@@ -479,17 +479,14 @@ def popUpFiles(main_ui,context,pos):
 
     menu = QtWidgets.QMenu()
     setStyle(menu)
-    # sS1 = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
-    # menu.setStyleSheet(sS1.read())
-    # sS1.close()
 
-    openWithMenu = QtWidgets.QMenu("Open With")
-    setStyle(openWithMenu)
-    # sS2 = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
-    # openWithMenu.setStyleSheet(sS2.read())
-    # sS2.close()
-    mpv = openWithMenu.addAction("mpv player")
-    menu.addMenu(openWithMenu)
+    #REMINDER : DO NOT ADD OPEN WITH ACTION
+
+    # openWithMenu = QtWidgets.QMenu("Open With")
+    # setStyle(openWithMenu)
+    # mpv = openWithMenu.addAction("mpv player")
+    # menu.addMenu(openWithMenu)
+
     copyAction = menu.addAction("Copy")
     pasteAction = menu.addAction("Paste")
 
