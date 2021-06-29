@@ -170,6 +170,8 @@ class IconProvider(QtWidgets.QFileIconProvider):
                 return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_audio_icon.svg"))
             if fileInfo.suffix() in imageFormats:
                 return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_image_icon.svg"))
+            if fileInfo.suffix() in textFormats:
+                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_files_icon.svg"))
             return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_icon.svg"))
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
 
@@ -222,7 +224,8 @@ def setDir(ROOTDIRNEW, main_ui):
     else:
         main_ui.treeDirs.itemsExpandable = True
         modelDirs = FSM(parent=main_ui)
-        modelDirs.setIconProvider(EmptyIconProvider())
+        # modelDirs.setIconProvider(EmptyIconProvider())
+        modelDirs.setIconProvider(IconProvider())
         modelDirs.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
         modelDirs.setRootPath(ROOTDIRNEW)
 
@@ -286,7 +289,7 @@ def openListDir(dirPath, main_ui):
         modelFiles = main_ui.listFiles.model()
         if not modelFiles:
             modelFiles = FSM(parent=main_ui)
-            # modelFiles.setIconProvider(IconProvider())
+            modelFiles.setIconProvider(IconProvider())
             main_ui.listFiles.setModel(modelFiles)
         modelFiles.setRootPath(CUR_DIR_SELECTED)
         # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
@@ -304,7 +307,7 @@ def openIconDir(dirPath, main_ui):
     modelFiles = main_ui.iconFiles.model()
     if not modelFiles:
         modelFiles = FSM4Files(parent=main_ui)
-        # modelFiles.setIconProvider(IconProvider())
+        modelFiles.setIconProvider(IconProvider())
         main_ui.iconFiles.setModel(modelFiles)
     modelFiles.setRootPath(CUR_DIR_SELECTED)
     # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
@@ -475,13 +478,18 @@ def popUpFiles(main_ui,context,pos):
     # debug.info(pasteUrls)
 
     menu = QtWidgets.QMenu()
-    sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
-    menu.setStyleSheet(sS.read())
-    sS.close()
+    setStyle(menu)
+    # sS1 = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
+    # menu.setStyleSheet(sS1.read())
+    # sS1.close()
 
-    # openWithMenu = QtWidgets.QMenu("Open With")
-    # mpv = openWithMenu.addAction("mpv player")
-    # menu.addMenu(openWithMenu)
+    openWithMenu = QtWidgets.QMenu("Open With")
+    setStyle(openWithMenu)
+    # sS2 = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
+    # openWithMenu.setStyleSheet(sS2.read())
+    # sS2.close()
+    mpv = openWithMenu.addAction("mpv player")
+    menu.addMenu(openWithMenu)
     copyAction = menu.addAction("Copy")
     pasteAction = menu.addAction("Paste")
 
@@ -544,6 +552,12 @@ def pasteFilesFromClipboard(main_ui,urls):
 def messages(main_ui,color,msg):
     main_ui.messages.setStyleSheet("color: %s" %color)
     main_ui.messages.setText("%s"%msg)
+
+
+def setStyle(ui):
+    sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
+    ui.setStyleSheet(sS.read())
+    sS.close()
 
 
 # def messageBox(msg1, msg2="", icon=""):
