@@ -216,6 +216,7 @@ def loadSidePane(main_ui):
 
 
 def setDir(ROOTDIRNEW, main_ui):
+    clearAllSelection(main_ui)
     # debug.info(type(ROOTDIRNEW))
     if "/blueprod/STOR" in ROOTDIRNEW:
         debug.info("Danger zone")
@@ -258,6 +259,7 @@ def openDir(dirPath, main_ui):
     # odT.openingDir.connect(startedLoading)
     # odT.openedDir.connect(finishedLoading)
     # odT.start()
+    clearAllSelection(main_ui)
     openListDir(dirPath,main_ui)
     openIconDir(dirPath, main_ui)
 
@@ -323,7 +325,6 @@ def dirSelected(index, model, main_ui):
     dirPath = model.filePath(index)
     openDir(dirPath,main_ui)
 
-
 # def copyPath(self, main_ui):
 #     path = main_ui.currentFolder.text().strip()
 #     # main_ui.outputFolder.clear()
@@ -340,8 +341,14 @@ def dirSelected(index, model, main_ui):
 #     else:
 #         pass
 
+def clearAllSelection(main_ui):
+    main_ui.iconFiles.clearSelection()
+    main_ui.listFiles.clearSelection()
+    debug.info("Cleared Selection")
+
 
 def changeView(self, main_ui):
+    clearAllSelection(main_ui)
     if main_ui.iconFiles.isHidden():
         main_ui.changeViewButt.setIcon(QtGui.QIcon(listIcon))
         main_ui.iconFiles.show()
@@ -446,7 +453,7 @@ def openFile(self, main_ui):
                     debug.info(suffix)
                     openCmd = ""
                     if suffix in videoFormats+audioFormats:
-                        openCmd = "mpv --input-conf={0} '{1}' ".format(os.path.join(projDir,"video-input.conf"),filePath)
+                        openCmd = "mpv --screenshot-directory=/tmp/ --input-conf={0} '{1}' ".format(os.path.join(projDir,"video-input.conf"),filePath)
                     elif (suffix in imageFormats):
                         # openCmd = projDir+os.sep+"mediaPlayer.py --path '{0}' ".format(filePath)
                         openCmd = "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} '{1}' "\
@@ -491,7 +498,7 @@ def popUpFiles(main_ui,context,pos):
 
     copyAction = menu.addAction("Copy")
     pasteAction = menu.addAction("Paste")
-    # deleteAction = menu.addAction("Delete")
+    deleteAction = menu.addAction("Delete")
 
     model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
     # debug.info(selectedFiles)
@@ -505,9 +512,9 @@ def popUpFiles(main_ui,context,pos):
             copyToClipboard(main_ui)
     if (action == pasteAction):
         pasteFilesFromClipboard(main_ui,pasteUrls)
-    # if (action == deleteAction):
-    #     if (selectedFiles):
-    #         deleteFiles(main_ui)
+    if (action == deleteAction):
+        if (selectedFiles):
+            deleteFiles(main_ui)
 
 
 def copyToClipboard(main_ui):
@@ -552,38 +559,39 @@ def pasteFilesFromClipboard(main_ui,urls):
             debug.info(str(sys.exc_info()))
 
 
-# def deleteFiles(main_ui):
-#     # sourcePath = os.path.abspath(main_ui.currentFolder.text().strip())
-#     model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
-#     # urlList = []
-#     # mimeData = QtCore.QMimeData()
-#     # filesStr = ""
-#     fileNames = []
-#     indexes = [i for i in selectedIndexes if i.column() == 0]
-#     for index in indexes:
-#         try:
-#             fileName = (str(model.fileName(index)))
-#             fileNames.append(fileName)
-#         except:
-#             debug.info(str(sys.exc_info()))
-#     debug.info(fileNames)
-#     #     filesStr += x
-#     # debug.info(filesStr)
-#     confirm = QtWidgets.QMessageBox()
-#     setStyle(confirm)
-#     # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
-#     confirm.setWindowTitle("Warning!")
-#     confirm.setInformativeText("<b>Delete these item(s)?</b>"+"\n")
-#     confirm.setText(",\n".join(i for i in fileNames))
-#     confirm.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
-#     selection = confirm.exec_()
-#     if (selection == QtWidgets.QMessageBox.Ok):
-#         debug.info("Deleted")
-#     # for x in selectedFiles:
-#     #     debug.info("To delete "+x)
-#     #     urlList.append(QtCore.QUrl().fromLocalFile(x))
-#     # mimeData.setUrls(urlList)
-#     # QtWidgets.QApplication.clipboard().setMimeData(mimeData)
+def deleteFiles(main_ui):
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())))
+    debug.info(currDir)
+    if currDir == "/opt/home/bluepixels/Downloads":
+        model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
+        fileNames = []
+        indexes = [i for i in selectedIndexes if i.column() == 0]
+        for index in indexes:
+            try:
+                fileName = (str(model.fileName(index)))
+                fileNames.append(fileName)
+            except:
+                debug.info(str(sys.exc_info()))
+        debug.info(fileNames)
+        confirm = QtWidgets.QMessageBox()
+        setStyle(confirm)
+        # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
+        confirm.setWindowTitle("Warning!")
+        confirm.setText("<b>Permanently Delete these item(s)?</b>"+"\n")
+        confirm.setInformativeText(",\n".join(i for i in fileNames))
+        confirm.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        selection = confirm.exec_()
+        if (selection == QtWidgets.QMessageBox.Yes):
+            for x in selectedFiles:
+                if "/opt/home/bluepixels/Downloads/" in x:
+                    removeCmd = "rm -frv '{0}' ".format(x)
+                    debug.info(shlex.split(removeCmd))
+                    if removeCmd:
+                        subprocess.Popen(shlex.split(removeCmd))
+                        debug.info("Deleted "+x)
+    else:
+        debug.info("Error! No permission to delete.")
+        messages(main_ui,"red","Error! No permission to delete.")
 
 
 def messages(main_ui,color,msg):
