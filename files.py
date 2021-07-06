@@ -161,8 +161,8 @@ iconsIcon = None
 
 class IconProvider(QtWidgets.QFileIconProvider):
     def icon(self, fileInfo):
-        if fileInfo.isDir():
-            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "folder_icon.svg"))
+        # if fileInfo.isDir():
+        #     return QtGui.QIcon(os.path.join(projDir, "imageFiles", "folder_icon.svg"))
         if fileInfo.isFile():
             if fileInfo.suffix() in videoFormats:
                 return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_video_icon.svg"))
@@ -176,9 +176,9 @@ class IconProvider(QtWidgets.QFileIconProvider):
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
 
 
-class EmptyIconProvider(QtWidgets.QFileIconProvider):
-    def icon(self, _):
-        return QtGui.QIcon()
+# class CustomIconProvider(QtWidgets.QFileIconProvider):
+#     def icon(self, fileInfo):
+#         return QtGui.QIcon()
 
 
 class FSM4Files(QtWidgets.QFileSystemModel):
@@ -224,8 +224,8 @@ def setDir(ROOTDIRNEW, main_ui):
     else:
         main_ui.treeDirs.itemsExpandable = True
         modelDirs = FSM(parent=main_ui)
-        # modelDirs.setIconProvider(EmptyIconProvider())
         modelDirs.setIconProvider(IconProvider())
+        # modelDirs.setIconProvider(CustomIconProvider())
         modelDirs.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
         modelDirs.setRootPath(ROOTDIRNEW)
 
@@ -290,6 +290,7 @@ def openListDir(dirPath, main_ui):
         if not modelFiles:
             modelFiles = FSM(parent=main_ui)
             modelFiles.setIconProvider(IconProvider())
+            # modelFiles.setIconProvider(CustomIconProvider())
             main_ui.listFiles.setModel(modelFiles)
         modelFiles.setRootPath(CUR_DIR_SELECTED)
         # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
@@ -308,6 +309,7 @@ def openIconDir(dirPath, main_ui):
     if not modelFiles:
         modelFiles = FSM4Files(parent=main_ui)
         modelFiles.setIconProvider(IconProvider())
+        # modelFiles.setIconProvider(CustomIconProvider())
         main_ui.iconFiles.setModel(modelFiles)
     modelFiles.setRootPath(CUR_DIR_SELECTED)
     # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
@@ -444,7 +446,7 @@ def openFile(self, main_ui):
                     debug.info(suffix)
                     openCmd = ""
                     if suffix in videoFormats+audioFormats:
-                        openCmd = "mpv '{0}' ".format(filePath)
+                        openCmd = "mpv --input-conf={0} '{1}' ".format(os.path.join(projDir,"video-input.conf"),filePath)
                     elif (suffix in imageFormats):
                         # openCmd = projDir+os.sep+"mediaPlayer.py --path '{0}' ".format(filePath)
                         openCmd = "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} '{1}' "\
@@ -489,6 +491,7 @@ def popUpFiles(main_ui,context,pos):
 
     copyAction = menu.addAction("Copy")
     pasteAction = menu.addAction("Paste")
+    # deleteAction = menu.addAction("Delete")
 
     model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
     # debug.info(selectedFiles)
@@ -502,6 +505,9 @@ def popUpFiles(main_ui,context,pos):
             copyToClipboard(main_ui)
     if (action == pasteAction):
         pasteFilesFromClipboard(main_ui,pasteUrls)
+    # if (action == deleteAction):
+    #     if (selectedFiles):
+    #         deleteFiles(main_ui)
 
 
 def copyToClipboard(main_ui):
@@ -544,6 +550,40 @@ def pasteFilesFromClipboard(main_ui,urls):
             messages(main_ui, "white", "")
         except:
             debug.info(str(sys.exc_info()))
+
+
+# def deleteFiles(main_ui):
+#     # sourcePath = os.path.abspath(main_ui.currentFolder.text().strip())
+#     model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
+#     # urlList = []
+#     # mimeData = QtCore.QMimeData()
+#     # filesStr = ""
+#     fileNames = []
+#     indexes = [i for i in selectedIndexes if i.column() == 0]
+#     for index in indexes:
+#         try:
+#             fileName = (str(model.fileName(index)))
+#             fileNames.append(fileName)
+#         except:
+#             debug.info(str(sys.exc_info()))
+#     debug.info(fileNames)
+#     #     filesStr += x
+#     # debug.info(filesStr)
+#     confirm = QtWidgets.QMessageBox()
+#     setStyle(confirm)
+#     # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
+#     confirm.setWindowTitle("Warning!")
+#     confirm.setInformativeText("<b>Delete these item(s)?</b>"+"\n")
+#     confirm.setText(",\n".join(i for i in fileNames))
+#     confirm.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+#     selection = confirm.exec_()
+#     if (selection == QtWidgets.QMessageBox.Ok):
+#         debug.info("Deleted")
+#     # for x in selectedFiles:
+#     #     debug.info("To delete "+x)
+#     #     urlList.append(QtCore.QUrl().fromLocalFile(x))
+#     # mimeData.setUrls(urlList)
+#     # QtWidgets.QApplication.clipboard().setMimeData(mimeData)
 
 
 def messages(main_ui,color,msg):

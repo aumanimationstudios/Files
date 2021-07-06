@@ -1263,3 +1263,7 @@ QListWidget::item {
 /*QListView::item {
     height: 28px;
 }*/
+
+QMessageBox QLabel {
+    color: red;
+}
