@@ -50,17 +50,21 @@ parser = argparse.ArgumentParser(description="File conversion utility")
 parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder containing image sequence or videos")
 args = parser.parse_args()
 
-places = {}
-
-homeDir = os.path.expanduser("~")
-downloadDir = homeDir+os.sep+"Downloads"
 rootDir = "/"
-crapDir = "/blueprod/CRAP/crap"
+homeDir = os.path.expanduser("~")
 
-places["Home"] = homeDir
-places["Root"] = rootDir
-places["Crap"] = crapDir
-places["Downloads"] = downloadDir
+places = {"Home" : homeDir,
+          "Root" : rootDir,
+          "Crap" : "/blueprod/CRAP/crap",
+          "Downloads" : homeDir+os.sep+"Downloads"}
+
+# downloadDir = homeDir+os.sep+"Downloads"
+# crapDir = "/blueprod/CRAP/crap"
+#
+# places["Home"] = homeDir
+# places["Root"] = rootDir
+# places["Crap"] = crapDir
+# places["Downloads"] = downloadDir
 
 app = None
 assPath = args.path
@@ -175,11 +179,9 @@ class IconProvider(QtWidgets.QFileIconProvider):
             return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_icon.svg"))
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
 
-
 # class CustomIconProvider(QtWidgets.QFileIconProvider):
 #     def icon(self, fileInfo):
 #         return QtGui.QIcon()
-
 
 class FSM4Files(QtWidgets.QFileSystemModel):
 
@@ -190,16 +192,32 @@ class FSM4Files(QtWidgets.QFileSystemModel):
 class FSM(QtWidgets.QFileSystemModel):
 
     def __init__(self,**kwargs):
-      super(FSM, self).__init__(**kwargs)
+        super(FSM, self).__init__(**kwargs)
 
 
-# class QListWidgetItemSort(QtWidgets.QListWidgetItem):
-#
-#   def __lt__(self, other):
-#     return self.data(QtCore.Qt.UserRole) < other.data(QtCore.Qt.UserRole)
-#
-#   def __ge__(self, other):
-#     return self.data(QtCore.Qt.UserRole) > other.data(QtCore.Qt.UserRole)
+class DateFormatDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super(DateFormatDelegate, self).__init__(parent)
+        self.format = "dd-MMM-yy"
+
+    def displayText(self, value, locale):
+        # return value.toDate().toString(self.date_format)
+        # return QDate.fromString(value, "yyyy-MM-dd").toString(self.format)
+        return QDateTime.fromString(value, "MM/dd/yy hh:mm a").toString(self.format)
+
+    # def createEditor(self, parent, option, index):
+    #     dateedit = QDateEdit(parent)
+    #     dateedit.setDisplayFormat(self.format)
+    #     dateedit.setCalendarPopup(True)
+    #     return dateedit
+    #
+    # def setEditorData(self, editor, index):
+    #     value = index.model().data(index, Qt.DisplayRole)
+    #     editor.setDate(QDate.fromString(value, "MM/dd/yy hh:mm a"))
+    #
+    # def setModelData(self, editor, model, index):
+    #     date = editor.date()
+    #     model.setData(index, date)
 
 
 def loadSidePane(main_ui):
@@ -301,11 +319,25 @@ def openListDir(dirPath, main_ui):
 
         main_ui.listFiles.setRootIndex(rootIdx)
 
+        main_ui.listFiles.setItemDelegateForColumn(3, DateFormatDelegate())
+        # main_ui.listFiles.setItemDelegateForColumn(3,DateFormatDelegate('dd/MM/yyyy'))
         # openIconDir(dirPath,main_ui)
 
 
 def openIconDir(dirPath, main_ui):
     global CUR_DIR_SELECTED
+
+    CUR_DIR_SELECTED = dirPath.strip()
+    debug.info(CUR_DIR_SELECTED)
+    if "/blueprod/STOR" in CUR_DIR_SELECTED:
+        debug.info("Danger zone")
+        main_ui.treeDirs.itemsExpandable = False
+        main_ui.treeDirs.collapseAll()
+        return
+    else:
+        main_ui.treeDirs.itemsExpandable = True
+        main_ui.currentFolder.clear()
+        main_ui.currentFolder.setText(CUR_DIR_SELECTED)
 
     modelFiles = main_ui.iconFiles.model()
     if not modelFiles:
@@ -490,6 +522,11 @@ def popUpFiles(main_ui,context,pos):
     setStyle(menu)
 
     #REMINDER : DO NOT ADD OPEN WITH ACTION
+    #TODO : CHANGE DATE FORMAT
+    #TODO : CUT OPTION
+    #TODO : RENAME OPTION
+    #TODO : NEW FOLDER OPTION
+    #TODO : SEARCH
 
     # openWithMenu = QtWidgets.QMenu("Open With")
     # setStyle(openWithMenu)
@@ -562,7 +599,8 @@ def pasteFilesFromClipboard(main_ui,urls):
 def deleteFiles(main_ui):
     currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())))
     debug.info(currDir)
-    if currDir == "/opt/home/bluepixels/Downloads":
+    # if currDir == "/opt/home/bluepixels/Downloads":
+    if "/opt/home/bluepixels/Downloads" in currDir:
         model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
         fileNames = []
         indexes = [i for i in selectedIndexes if i.column() == 0]
