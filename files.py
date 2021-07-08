@@ -522,7 +522,8 @@ def popUpFiles(main_ui,context,pos):
     setStyle(menu)
 
     #REMINDER : DO NOT ADD OPEN WITH ACTION
-    #TODO : CHANGE DATE FORMAT
+    #DONE : CHANGE DATE FORMAT
+    #DONE : DELETE OPTION
     #TODO : CUT OPTION
     #TODO : RENAME OPTION
     #TODO : NEW FOLDER OPTION
