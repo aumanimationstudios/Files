@@ -393,7 +393,7 @@ def changeView(self, main_ui):
 
 def previousDir(self, main_ui):
     # debug.info("previous directory")
-    ROOTDIR = main_ui.currentFolder.text().strip()
+    ROOTDIR = main_ui.currentFolder.text().strip().encode('utf-8')
     if ROOTDIR != "":
         if os.path.exists(ROOTDIR):
             ROOTDIRNEW = os.sep.join(ROOTDIR.split(os.sep)[:-1])
@@ -406,7 +406,7 @@ def previousDir(self, main_ui):
 
 
 def changeDir(self, main_ui):
-    ROOTDIR = main_ui.currentFolder.text().strip()
+    ROOTDIR = main_ui.currentFolder.text().strip().encode('utf-8')
     if ROOTDIR != "":
         ROOTDIRNEW = os.path.abspath(os.path.expanduser(ROOTDIR))
         # home = os.path.expanduser(ROOTDIR)
@@ -437,7 +437,9 @@ def getSelectedFiles(main_ui):
 
     for selectedIndex in selectedIndexes:
         try:
-            filePath = os.path.abspath(str(model.filePath(selectedIndex)))
+            # filePath = os.path.abspath(str(model.filePath(selectedIndex)))
+            filePath = os.path.abspath(str(model.filePath(selectedIndex).encode('utf-8')))
+            debug.info(filePath)
             files.append(filePath)
         except:
             debug.info(str(sys.exc_info()))
@@ -468,8 +470,8 @@ def openFile(self, main_ui):
     for index in indexes:
         try:
             fileInfo = model.fileInfo(index)
-            filePath = os.path.abspath(str(model.filePath(index)))
-            fileName = str(model.fileName(index))
+            filePath = os.path.abspath(str(model.filePath(index).encode('utf-8')))
+            fileName = str(model.fileName(index).encode('utf-8'))
             debug.info(filePath)
             debug.info(fileName)
 
@@ -570,27 +572,27 @@ def copyToClipboard(main_ui):
 def pasteFilesFromClipboard(main_ui,urls):
     for url in urls:
         try:
-            sourceFile = url.toLocalFile()
-            destFolder = main_ui.currentFolder.text().strip()
+            sourceFile = url.toLocalFile().encode('utf-8')
+            destFolder = main_ui.currentFolder.text().strip().encode('utf-8')
             # debug.info(destFolder)
             if destFolder:
                 destPath = os.path.abspath(destFolder)+"/"
                 # debug.info(destPath)
                 if destPath and os.path.exists(destPath):
-                    if "/opt/home/bluepixels" in destPath:
-                        debug.info("Danger Zone: Can not paste")
-                    else:
-                        pasteCmd = "rsync -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
-                        debug.info(pasteCmd)
-                        messages(main_ui, "green", "Copying "+sourceFile)
-                        p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
-                        for line in iter(p.stdout.readline, b''):
-                            synData = (tuple(filter(None, line.strip().split(' '))))
-                            if synData:
-                                prctg = synData[1].split("%")[0]
-                                # debug.info(prctg)
-                                main_ui.progressBar.show()
-                                main_ui.progressBar.setValue(int(prctg))
+                    # if "/opt/home/bluepixels" in destPath:
+                    #     debug.info("Danger Zone: Can not paste")
+                    # else:
+                    pasteCmd = "rsync -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
+                    debug.info(pasteCmd)
+                    messages(main_ui, "green", "Copying "+sourceFile)
+                    p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
+                    for line in iter(p.stdout.readline, b''):
+                        synData = (tuple(filter(None, line.strip().split(' '))))
+                        if synData:
+                            prctg = synData[1].split("%")[0]
+                            # debug.info(prctg)
+                            main_ui.progressBar.show()
+                            main_ui.progressBar.setValue(int(prctg))
             main_ui.progressBar.hide()
             messages(main_ui, "white", "")
         except:
@@ -598,7 +600,7 @@ def pasteFilesFromClipboard(main_ui,urls):
 
 
 def deleteFiles(main_ui):
-    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())))
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
     debug.info(currDir)
     # if currDir == "/opt/home/bluepixels/Downloads":
     if "/opt/home/bluepixels/Downloads" in currDir:
@@ -607,7 +609,7 @@ def deleteFiles(main_ui):
         indexes = [i for i in selectedIndexes if i.column() == 0]
         for index in indexes:
             try:
-                fileName = (str(model.fileName(index)))
+                fileName = (str(model.fileName(index).encode('utf-8')))
                 fileNames.append(fileName)
             except:
                 debug.info(str(sys.exc_info()))
@@ -676,7 +678,7 @@ def mainGui(main_ui):
     main_ui.treeDirs.sortByColumn(0, QtCore.Qt.AscendingOrder)
     main_ui.listFiles.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
-    ROOTDIRNEW = os.path.abspath(main_ui.currentFolder.text().strip())
+    ROOTDIRNEW = os.path.abspath(main_ui.currentFolder.text().strip()).encode('utf-8')
     debug.info(ROOTDIRNEW)
 
     modelDirs = setDir(ROOTDIRNEW, main_ui)
