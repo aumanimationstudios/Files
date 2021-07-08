@@ -579,20 +579,20 @@ def pasteFilesFromClipboard(main_ui,urls):
                 destPath = os.path.abspath(destFolder)+"/"
                 # debug.info(destPath)
                 if destPath and os.path.exists(destPath):
-                    # if "/opt/home/bluepixels" in destPath:
-                    #     debug.info("Danger Zone: Can not paste")
-                    # else:
-                    pasteCmd = "rsync -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
-                    debug.info(pasteCmd)
-                    messages(main_ui, "green", "Copying "+sourceFile)
-                    p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
-                    for line in iter(p.stdout.readline, b''):
-                        synData = (tuple(filter(None, line.strip().split(' '))))
-                        if synData:
-                            prctg = synData[1].split("%")[0]
-                            # debug.info(prctg)
-                            main_ui.progressBar.show()
-                            main_ui.progressBar.setValue(int(prctg))
+                    if "/opt/home/bluepixels" in destPath:
+                        debug.info("Danger Zone: Can not paste")
+                    else:
+                        pasteCmd = "rsync -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
+                        debug.info(pasteCmd)
+                        messages(main_ui, "green", "Copying "+sourceFile)
+                        p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
+                        for line in iter(p.stdout.readline, b''):
+                            synData = (tuple(filter(None, line.strip().split(' '))))
+                            if synData:
+                                prctg = synData[1].split("%")[0]
+                                # debug.info(prctg)
+                                main_ui.progressBar.show()
+                                main_ui.progressBar.setValue(int(prctg))
             main_ui.progressBar.hide()
             messages(main_ui, "white", "")
         except:
