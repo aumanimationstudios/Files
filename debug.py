@@ -4,13 +4,13 @@ __author__ = "Shrinidhi Rao"
 __license__ = "GPL"
 __email__ = "shrinidhi666@gmail.com"
 
-import sys
 import os
 
-sys.path.append(os.sep.join(os.path.abspath(__file__).split(os.sep)[:-2]))
-
 from logging import *
+import tempfile
+
+tempDir = tempfile.gettempdir()
+user = os.environ['USER']
 
 FORMAT = "%(asctime)s : %(pathname)s : %(funcName)s - %(levelname)s - %(lineno)d - %(message)s"
-basicConfig(format=FORMAT, level=INFO)
-
+basicConfig(filename=tempDir + os.sep + "Files_" + user + ".log",filemode='a', format=FORMAT, level=INFO)

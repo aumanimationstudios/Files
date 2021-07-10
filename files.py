@@ -42,12 +42,11 @@ videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV']
 audioFormats = ['mp3']
 textFormats = ['txt','py','sh','text']
 supportedFormats = ['mp4','mp3']
-# detectedFormats = []
-# frameNums = []
-# missingFrames = []
 
-parser = argparse.ArgumentParser(description="File conversion utility")
-parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder containing image sequence or videos")
+permittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server"]
+
+parser = argparse.ArgumentParser(description="File viewer utility")
+parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder")
 args = parser.parse_args()
 
 rootDir = "/"
@@ -58,13 +57,7 @@ places = {"Home" : homeDir,
           "Crap" : "/blueprod/CRAP/crap",
           "Downloads" : homeDir+os.sep+"Downloads"}
 
-# downloadDir = homeDir+os.sep+"Downloads"
-# crapDir = "/blueprod/CRAP/crap"
-#
-# places["Home"] = homeDir
-# places["Root"] = rootDir
-# places["Crap"] = crapDir
-# places["Downloads"] = downloadDir
+rename = os.path.join(projDir, "rename.py")
 
 app = None
 assPath = args.path
@@ -439,7 +432,7 @@ def getSelectedFiles(main_ui):
         try:
             # filePath = os.path.abspath(str(model.filePath(selectedIndex)))
             filePath = os.path.abspath(str(model.filePath(selectedIndex).encode('utf-8')))
-            debug.info(filePath)
+            # debug.info(filePath)
             files.append(filePath)
         except:
             debug.info(str(sys.exc_info()))
@@ -530,6 +523,8 @@ def popUpFiles(main_ui,context,pos):
     #TODO : RENAME OPTION
     #TODO : NEW FOLDER OPTION
     #TODO : SEARCH
+    #TODO : DETAILS
+    #TODO : ADD FAVOURITES TO SIDEPANE
 
     # openWithMenu = QtWidgets.QMenu("Open With")
     # setStyle(openWithMenu)
@@ -538,6 +533,7 @@ def popUpFiles(main_ui,context,pos):
 
     copyAction = menu.addAction("Copy")
     pasteAction = menu.addAction("Paste")
+    renameAction = menu.addAction("Rename")
     deleteAction = menu.addAction("Delete")
 
     model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
@@ -552,6 +548,9 @@ def popUpFiles(main_ui,context,pos):
             copyToClipboard(main_ui)
     if (action == pasteAction):
         pasteFilesFromClipboard(main_ui,pasteUrls)
+    if (action == renameAction):
+        if (selectedFiles):
+            renameUi(main_ui)
     if (action == deleteAction):
         if (selectedFiles):
             deleteFiles(main_ui)
@@ -597,6 +596,37 @@ def pasteFilesFromClipboard(main_ui,urls):
             messages(main_ui, "white", "")
         except:
             debug.info(str(sys.exc_info()))
+
+
+def renameUi(main_ui):
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    model, selectedIndexes, selectedFiles = getSelectedFiles(main_ui)
+
+    fileDets = {}
+    # if currDir in permittedDirs:
+    permitted = False
+    for x in permittedDirs:
+        if x in currDir:
+            permitted = True
+    if permitted:
+        indexes = [i for i in selectedIndexes if i.column() == 0]
+        for index in indexes:
+            try:
+                fileName = (str(model.fileName(index).encode('utf-8')))
+                filePath = os.path.abspath(str(model.filePath(index).encode('utf-8')))
+                fileDets[fileName] = filePath
+            except:
+                debug.info(str(sys.exc_info()))
+        debug.info(fileDets)
+
+        if (len(fileDets)) == 1:
+            for key, value in fileDets.items():
+                cmd = sys.executable+" "+rename+" --name '{0}' --path '{1}' ".format(key,currDir)
+                debug.info(cmd)
+                subprocess.Popen(shlex.split(cmd))
+    else:
+        debug.info("Error! No permission to rename.")
+        messages(main_ui,"red","Error! No permission to rename.")
 
 
 def deleteFiles(main_ui):
