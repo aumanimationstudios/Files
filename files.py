@@ -21,6 +21,7 @@ import time
 import threading
 import traceback
 import pathlib
+import json
 
 from PyQt5.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem
 from PyQt5 import QtCore, uic, QtGui, QtWidgets
@@ -40,10 +41,10 @@ debug.info(main_ui_file)
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
 videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV']
 audioFormats = ['mp3']
-textFormats = ['txt','py','sh','text']
+textFormats = ['txt','py','sh','text','json']
 supportedFormats = ['mp4','mp3']
 
-permittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server"]
+renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server"]
 
 parser = argparse.ArgumentParser(description="File viewer utility")
 parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder")
@@ -52,10 +53,13 @@ args = parser.parse_args()
 rootDir = "/"
 homeDir = os.path.expanduser("~")
 
-places = {"Home" : homeDir,
-          "Root" : rootDir,
-          "Crap" : "/blueprod/CRAP/crap",
-          "Downloads" : homeDir+os.sep+"Downloads"}
+confFile = homeDir+os.sep+".config"+os.sep+"files.json"
+
+places = {}
+places["Home"] = homeDir
+# places["Root"] = rootDir
+places["Crap"] = "/blueprod/CRAP/crap"
+places["Downloads"] = homeDir+os.sep+"Downloads"
 
 rename = os.path.join(projDir, "rename.py")
 
@@ -212,18 +216,51 @@ class DateFormatDelegate(QtWidgets.QStyledItemDelegate):
     #     date = editor.date()
     #     model.setData(index, date)
 
+def initConfig():
+    global places
+    global confFile
+
+    if os.path.exists(confFile):
+        f = open(confFile)
+        data = json.load(f)
+        places = data
+    else:
+        with open(confFile, 'w') as conf_file:
+            json.dump(places, conf_file, sort_keys=True, indent=4)
+
 
 def loadSidePane(main_ui):
+    global places
     model = QtGui.QStandardItemModel()
     main_ui.sidePane.setModel(model)
-    for key, value in places.items():
+    sortedPlaces = OrderedDict(sorted(places.items()))
+
+    for key, value in sortedPlaces.items():
         item = QtGui.QStandardItem(key)
         model.appendRow(item)
         thumb = QtWidgets.QPushButton()
         thumb.setText(key)
         thumb.setFocusPolicy(Qt.NoFocus)
+        # thumb.clicked.connect(lambda x, path=value, ui=main_ui, butt=thumb: buttonClicked(path, ui, butt))
         thumb.clicked.connect(lambda x, path=value, ui=main_ui: openDir(path, ui))
+        thumb.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        thumb.customContextMenuRequested.connect(lambda pos,context=main_ui.sidePane.viewport(), name=key, main_ui=main_ui: removeFavourite(main_ui, context, pos, name))
         main_ui.sidePane.setIndexWidget(item.index(), thumb)
+
+
+def removeFavourite(main_ui,context,pos,name):
+    global places
+    debug.info(name)
+    menu = QtWidgets.QMenu()
+    setStyle(menu)
+    remove = menu.addAction("Remove")
+    action = menu.exec_(context.mapToGlobal(pos))
+    if action == remove:
+        places.pop(name)
+        with open(confFile, 'w') as conf_file:
+            json.dump(places, conf_file, sort_keys=True, indent=4)
+        initConfig()
+        loadSidePane(main_ui)
 
 
 def setDir(ROOTDIRNEW, main_ui):
@@ -519,12 +556,13 @@ def popUpFiles(main_ui,context,pos):
     #REMINDER : DO NOT ADD OPEN WITH ACTION
     #DONE : CHANGE DATE FORMAT
     #DONE : DELETE OPTION
+    #DONE : RENAME OPTION
+    #DONE : ADD FAVOURITES TO SIDEPANE
     #TODO : CUT OPTION
-    #TODO : RENAME OPTION
+    #TODO : TAB OPTION
     #TODO : NEW FOLDER OPTION
     #TODO : SEARCH
     #TODO : DETAILS
-    #TODO : ADD FAVOURITES TO SIDEPANE
 
     # openWithMenu = QtWidgets.QMenu("Open With")
     # setStyle(openWithMenu)
@@ -533,6 +571,7 @@ def popUpFiles(main_ui,context,pos):
 
     copyAction = menu.addAction("Copy")
     pasteAction = menu.addAction("Paste")
+    addToFavAction = menu.addAction("Add To Favourites")
     renameAction = menu.addAction("Rename")
     deleteAction = menu.addAction("Delete")
 
@@ -548,6 +587,9 @@ def popUpFiles(main_ui,context,pos):
             copyToClipboard(main_ui)
     if (action == pasteAction):
         pasteFilesFromClipboard(main_ui,pasteUrls)
+    if (action == addToFavAction):
+        if (selectedFiles):
+            addToFavourites(main_ui)
     if (action == renameAction):
         if (selectedFiles):
             renameUi(main_ui)
@@ -598,14 +640,34 @@ def pasteFilesFromClipboard(main_ui,urls):
             debug.info(str(sys.exc_info()))
 
 
+def addToFavourites(main_ui):
+    global places
+    # currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    model, selectedIndexes, selectedFiles = getSelectedFiles(main_ui)
+
+    indexes = [i for i in selectedIndexes if i.column() == 0]
+    for index in indexes:
+        try:
+            fileInfo = model.fileInfo(index)
+            fileName = (str(model.fileName(index).encode('utf-8')).capitalize())
+            filePath = os.path.abspath(str(model.filePath(index).encode('utf-8')))
+            if fileInfo.isDir():
+                places[fileName] = filePath
+                with open(confFile, 'w') as conf_file:
+                    json.dump(places, conf_file, sort_keys=True, indent=4)
+                initConfig()
+                loadSidePane(main_ui)
+        except:
+            debug.info(str(sys.exc_info()))
+
+
 def renameUi(main_ui):
     currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
     model, selectedIndexes, selectedFiles = getSelectedFiles(main_ui)
 
     fileDets = {}
-    # if currDir in permittedDirs:
     permitted = False
-    for x in permittedDirs:
+    for x in renamePermittedDirs:
         if x in currDir:
             permitted = True
     if permitted:
@@ -720,6 +782,7 @@ def mainGui(main_ui):
 
     openDir(homeDir,main_ui)
 
+    initConfig()
     loadSidePane(main_ui)
 
     listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
@@ -741,6 +804,12 @@ def mainGui(main_ui):
     main_ui.changeViewButt.setShortcut(QtGui.QKeySequence("V"))
     main_ui.previousDirButt.setShortcut(QtGui.QKeySequence("Backspace"))
     main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
+    main_ui.clearPathButt.setShortcut(QtGui.QKeySequence("Delete"))
+
+    main_ui.changeViewButt.setToolTip("Change View (V)")
+    main_ui.previousDirButt.setToolTip("Previous Directory (Backspace)")
+    main_ui.changeDirButt.setToolTip("Change Directory (Enter)")
+    main_ui.clearPathButt.setToolTip("Clear Path (Delete)")
 
     # main_ui.copyButton.setToolTip("Copy to Clipboard")
     # main_ui.pasteButton.setToolTip("Paste from Clipboard")
