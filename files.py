@@ -35,7 +35,7 @@ sys.path.append(projDir)
 
 
 # main_ui_file = os.path.join(projDir, "files.ui")
-main_ui_file = os.path.join(projDir, "files_1.ui")
+main_ui_file = os.path.join(projDir, "files_2.ui")
 debug.info(main_ui_file)
 
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
@@ -229,38 +229,108 @@ def initConfig():
             json.dump(places, conf_file, sort_keys=True, indent=4)
 
 
-def loadSidePane(main_ui):
+def loadFavourites(main_ui):
     global places
     model = QtGui.QStandardItemModel()
-    main_ui.sidePane.setModel(model)
-    sortedPlaces = OrderedDict(sorted(places.items()))
+    main_ui.favourites.setModel(model)
 
+    sortedPlaces = OrderedDict(sorted(places.items()))
     for key, value in sortedPlaces.items():
         item = QtGui.QStandardItem(key)
         model.appendRow(item)
+
+        frame = QtWidgets.QFrame()
+        hLay = QtWidgets.QHBoxLayout()
+        hLay.setContentsMargins(0, 0, 0, 0)
+
+        line = QtWidgets.QLineEdit()
+        line.setText(key)
+        line.hide()
+
         thumb = QtWidgets.QPushButton()
         thumb.setText(key)
         thumb.setFocusPolicy(Qt.NoFocus)
-        # thumb.clicked.connect(lambda x, path=value, ui=main_ui, butt=thumb: buttonClicked(path, ui, butt))
+
+        entButt = QtWidgets.QPushButton()
+        entButt.setFocusPolicy(Qt.NoFocus)
+        entButt.hide()
+
         thumb.clicked.connect(lambda x, path=value, ui=main_ui: openDir(path, ui))
+        entButt.clicked.connect(lambda x,button=thumb,editor=line,entButt=entButt,main_ui=main_ui: changeFavName(main_ui,button,editor,entButt))
+
         thumb.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        thumb.customContextMenuRequested.connect(lambda pos,context=main_ui.sidePane.viewport(), name=key, main_ui=main_ui: removeFavourite(main_ui, context, pos, name))
-        main_ui.sidePane.setIndexWidget(item.index(), thumb)
+        thumb.customContextMenuRequested.connect(lambda pos,button=thumb,editor=line,entButt=entButt,main_ui=main_ui: favouritesPopup(main_ui,button,editor,entButt,pos))
+
+        hLay.addWidget(thumb)
+        hLay.addWidget(line)
+        hLay.addWidget(entButt)
+        frame.setLayout(hLay)
+
+        main_ui.favourites.setIndexWidget(item.index(), frame)
 
 
-def removeFavourite(main_ui,context,pos,name):
+        # item1 = QtWidgets.QListWidgetItem()
+        # item1.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled)
+        # item1.setText(key)
+        # main_ui.favourites.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        # main_ui.favourites.customContextMenuRequested.connect(lambda pos, context=main_ui.favourites.viewport(), name=key, main_ui=main_ui: favouritesPopup(main_ui,context,pos,name))
+        # main_ui.favourites.addItem(item1)
+
+
+def favouritesPopup(main_ui,button,editor,entButt,pos):
     global places
-    debug.info(name)
+    currName = button.text()
+    # editorName = editor.text()
+    debug.info(currName)
+    # debug.info(editorName)
+
     menu = QtWidgets.QMenu()
     setStyle(menu)
+    rename = menu.addAction("Rename")
     remove = menu.addAction("Remove")
-    action = menu.exec_(context.mapToGlobal(pos))
+    # action = menu.exec_(context.mapToGlobal(pos))
+    action = menu.exec_(button.mapToGlobal(pos))
+
+    if action == rename:
+        main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
+        entButt.setShortcut(QtGui.QKeySequence("Return"))
+        button.hide()
+        editor.show()
+        entButt.show()
+        editor.setFocus()
+
     if action == remove:
-        places.pop(name)
+        places.pop(currName)
         with open(confFile, 'w') as conf_file:
             json.dump(places, conf_file, sort_keys=True, indent=4)
         initConfig()
-        loadSidePane(main_ui)
+        loadFavourites(main_ui)
+
+
+def changeFavName(main_ui,button,editor,entButt):
+    currName = button.text()
+    newName = editor.text()
+    debug.info(currName)
+    debug.info(newName)
+
+    if newName == currName:
+        debug.info("no changes found in name")
+    else:
+        for key,value in places.items():
+            if key == currName:
+                places[newName] = value
+                places.pop(key)
+                with open(confFile, 'w') as conf_file:
+                    json.dump(places, conf_file, sort_keys=True, indent=4)
+                initConfig()
+                loadFavourites(main_ui)
+
+    button.show()
+    editor.hide()
+    entButt.hide()
+    editor.clearFocus()
+    main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
+    entButt.setShortcut(QtGui.QKeySequence(""))
 
 
 def setDir(ROOTDIRNEW, main_ui):
@@ -656,7 +726,7 @@ def addToFavourites(main_ui):
                 with open(confFile, 'w') as conf_file:
                     json.dump(places, conf_file, sort_keys=True, indent=4)
                 initConfig()
-                loadSidePane(main_ui)
+                loadFavourites(main_ui)
         except:
             debug.info(str(sys.exc_info()))
 
@@ -783,7 +853,7 @@ def mainGui(main_ui):
     openDir(homeDir,main_ui)
 
     initConfig()
-    loadSidePane(main_ui)
+    loadFavourites(main_ui)
 
     listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
     iconsIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_icons.png"))
