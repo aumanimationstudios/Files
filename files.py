@@ -57,7 +57,7 @@ textFormats = ['txt','py','sh','text','json']
 supportedFormats = ['mp4','mp3']
 
 renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server"]
-prohibitedDirs = ["/blueprod/STOR", "/proj"]
+prohibitedDirs = ["/blueprod/STOR", "/proj", "/library"]
 
 parser = argparse.ArgumentParser(description="File viewer utility")
 parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder")
