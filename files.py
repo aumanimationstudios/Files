@@ -5,6 +5,18 @@ __license__ = "GPL"
 __email__ = "sanathshetty111@gmail.com"
 
 
+#REMINDER : DO NOT ADD OPEN WITH ACTION
+#DONE : CHANGE DATE FORMAT
+#DONE : DELETE OPTION
+#DONE : RENAME OPTION
+#DONE : ADD FAVOURITES TO SIDEPANE
+#TODO : CUT OPTION
+#TODO : TAB OPTION
+#TODO : NEW FOLDER OPTION
+#TODO : SEARCH
+#TODO : DETAILS
+
+
 import debug
 import argparse
 import glob
@@ -45,6 +57,7 @@ textFormats = ['txt','py','sh','text','json']
 supportedFormats = ['mp4','mp3']
 
 renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server"]
+prohibitedDirs = ["/blueprod/STOR", "/proj"]
 
 parser = argparse.ArgumentParser(description="File viewer utility")
 parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder")
@@ -74,90 +87,6 @@ else:
 CUR_DIR_SELECTED = None
 listIcon = None
 iconsIcon = None
-
-
-
-# class WorkerSignals(QtCore.QObject):
-#     '''
-#     Defines the signals available from a running worker thread.
-#     Supported signals are:
-#     finished
-#         No data
-#     error
-#         `tuple` (exctype, value, traceback.format_exc() )
-#     result
-#         `object` data returned from processing, anything
-#     progress
-#         `int` indicating % progress
-#     '''
-#     finished = pyqtSignal()
-#     error = pyqtSignal(tuple)
-#     result = pyqtSignal(object)
-#     progress = pyqtSignal(int)
-
-
-# class Worker(QtCore.QRunnable):
-#     '''
-#     Worker thread
-#     Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
-#     :param callback: The function callback to run on this worker thread. Supplied args and
-#                      kwargs will be passed through to the runner.
-#     :type callback: function
-#     :param args: Arguments to pass to the callback function
-#     :param kwargs: Keywords to pass to the callback function
-#     '''
-#     def __init__(self, fn, *args, **kwargs):
-#         super(Worker, self).__init__()
-#
-#         # Store constructor arguments (re-used for processing)
-#         self.fn = fn
-#         self.args = args
-#         self.kwargs = kwargs
-#         self.signals = WorkerSignals()
-#
-#         # Add the callback to our kwargs
-#         self.kwargs['progress_callback'] = self.signals.progress
-#
-#     @pyqtSlot()
-#     def run(self):
-#         '''
-#         Initialise the runner function with passed args, kwargs.
-#         '''
-#         # Retrieve args/kwargs here; and fire processing using them
-#         try:
-#             result = self.fn(*self.args, **self.kwargs)
-#         except:
-#             debug.info(str(sys.exc_info()))
-#             traceback.print_exc()
-#             exctype, value = sys.exc_info()[:2]
-#             self.signals.error.emit((exctype, value, traceback.format_exc()))
-#         else:
-#             self.signals.result.emit(result)  # Return the result of the processing
-#         finally:
-#             self.signals.finished.emit()  # Done
-
-
-# class openDirThread(QtCore.QThread):
-#     openingDir = QtCore.pyqtSignal(str)
-#     openedDir = QtCore.pyqtSignal(str)
-#
-#     def __init__(self,parent,path):
-#         super(openDirThread, self).__init__(parent)
-#         self.ui = parent
-#         self.path = path
-#
-#     def run(self):
-#         self.openingDir.emit("Opening")
-#
-#         # openListDir(self.path, self.ui)
-#         modelFiles = self.ui.listFiles.model()
-#         if not modelFiles:
-#             modelFiles = FSM()
-#             modelFiles.setIconProvider(IconProvider())
-#             self.ui.listFiles.setModel(modelFiles)
-#         debug.info(modelFiles)
-#
-#         self.openedDir.emit("Done")
 
 
 class IconProvider(QtWidgets.QFileIconProvider):
@@ -202,19 +131,6 @@ class DateFormatDelegate(QtWidgets.QStyledItemDelegate):
         # return QDate.fromString(value, "yyyy-MM-dd").toString(self.format)
         return QDateTime.fromString(value, "MM/dd/yy hh:mm a").toString(self.format)
 
-    # def createEditor(self, parent, option, index):
-    #     dateedit = QDateEdit(parent)
-    #     dateedit.setDisplayFormat(self.format)
-    #     dateedit.setCalendarPopup(True)
-    #     return dateedit
-    #
-    # def setEditorData(self, editor, index):
-    #     value = index.model().data(index, Qt.DisplayRole)
-    #     editor.setDate(QDate.fromString(value, "MM/dd/yy hh:mm a"))
-    #
-    # def setModelData(self, editor, model, index):
-    #     date = editor.date()
-    #     model.setData(index, date)
 
 def initConfig():
     global places
@@ -267,14 +183,6 @@ def loadFavourites(main_ui):
         frame.setLayout(hLay)
 
         main_ui.favourites.setIndexWidget(item.index(), frame)
-
-
-        # item1 = QtWidgets.QListWidgetItem()
-        # item1.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled)
-        # item1.setText(key)
-        # main_ui.favourites.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        # main_ui.favourites.customContextMenuRequested.connect(lambda pos, context=main_ui.favourites.viewport(), name=key, main_ui=main_ui: favouritesPopup(main_ui,context,pos,name))
-        # main_ui.favourites.addItem(item1)
 
 
 def favouritesPopup(main_ui,button,editor,entButt,pos):
@@ -361,47 +269,23 @@ def setDir(ROOTDIRNEW, main_ui):
         return (modelDirs)
 
 
-# def openDir(dirPath, main_ui):
-#     try:
-#         threadPool = QtCore.QThreadPool()
-#         debug.info("Multithreading with maximum {0} threads".format(threadPool.maxThreadCount()))
-#         worker = Worker(fn=openListDir,args=(dirPath, main_ui))  # Any other args, kwargs are passed to the run function
-#         threadPool.start(worker)
-#     except:
-#         debug.info(str(sys.exc_info()))
-
-
 def openDir(dirPath, main_ui):
-    # odT = openDirThread(main_ui,dirPath)
-    # # self.msg = messageBox("Place Your Tag")
-    # odT.openingDir.connect(startedLoading)
-    # odT.openedDir.connect(finishedLoading)
-    # odT.start()
     clearAllSelection(main_ui)
     openListDir(dirPath,main_ui)
     openIconDir(dirPath, main_ui)
-
-# def startedLoading():
-#     debug.info("started loading")
-#
-#
-# def finishedLoading():
-#     debug.info("finished loading")
 
 
 def openListDir(dirPath, main_ui):
     global CUR_DIR_SELECTED
 
-    # pathSelected = modelDirs.filePath(idx)
-    # main_ui.labelFile.setText(str(pathSelected).replace(ROOTDIR,"-"))
     CUR_DIR_SELECTED = dirPath.strip()
     debug.info(CUR_DIR_SELECTED)
-    if "/blueprod/STOR" in CUR_DIR_SELECTED:
-        debug.info("Danger zone")
-        main_ui.treeDirs.itemsExpandable = False
-        main_ui.treeDirs.collapseAll()
-        return
-    else:
+
+    permitted = True
+    for x in prohibitedDirs:
+        if x in CUR_DIR_SELECTED:
+            permitted = False
+    if permitted:
         main_ui.treeDirs.itemsExpandable = True
         main_ui.currentFolder.clear()
         main_ui.currentFolder.setText(CUR_DIR_SELECTED)
@@ -422,6 +306,11 @@ def openListDir(dirPath, main_ui):
         main_ui.listFiles.setItemDelegateForColumn(3, DateFormatDelegate())
         # main_ui.listFiles.setItemDelegateForColumn(3,DateFormatDelegate('dd/MM/yyyy'))
         # openIconDir(dirPath,main_ui)
+    else:
+        debug.info("Danger zone")
+        main_ui.treeDirs.itemsExpandable = False
+        main_ui.treeDirs.collapseAll()
+        return
 
 
 def openIconDir(dirPath, main_ui):
@@ -429,28 +318,32 @@ def openIconDir(dirPath, main_ui):
 
     CUR_DIR_SELECTED = dirPath.strip()
     debug.info(CUR_DIR_SELECTED)
-    if "/blueprod/STOR" in CUR_DIR_SELECTED:
-        debug.info("Danger zone")
-        main_ui.treeDirs.itemsExpandable = False
-        main_ui.treeDirs.collapseAll()
-        return
-    else:
+    permitted = True
+    for x in prohibitedDirs:
+        if x in CUR_DIR_SELECTED:
+            permitted = False
+    if permitted:
         main_ui.treeDirs.itemsExpandable = True
         main_ui.currentFolder.clear()
         main_ui.currentFolder.setText(CUR_DIR_SELECTED)
 
-    modelFiles = main_ui.iconFiles.model()
-    if not modelFiles:
-        modelFiles = FSM4Files(parent=main_ui)
-        modelFiles.setIconProvider(IconProvider())
-        # modelFiles.setIconProvider(CustomIconProvider())
-        main_ui.iconFiles.setModel(modelFiles)
-    modelFiles.setRootPath(CUR_DIR_SELECTED)
-    # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
-    # modelFiles.setFilter(QtCore.QDir.NoDotAndDotDot)
-    rootIdx = modelFiles.index(CUR_DIR_SELECTED)
+        modelFiles = main_ui.iconFiles.model()
+        if not modelFiles:
+            modelFiles = FSM4Files(parent=main_ui)
+            modelFiles.setIconProvider(IconProvider())
+            # modelFiles.setIconProvider(CustomIconProvider())
+            main_ui.iconFiles.setModel(modelFiles)
+        modelFiles.setRootPath(CUR_DIR_SELECTED)
+        # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
+        # modelFiles.setFilter(QtCore.QDir.NoDotAndDotDot)
+        rootIdx = modelFiles.index(CUR_DIR_SELECTED)
 
-    main_ui.iconFiles.setRootIndex(rootIdx)
+        main_ui.iconFiles.setRootIndex(rootIdx)
+    else:
+        debug.info("Danger zone")
+        main_ui.treeDirs.itemsExpandable = False
+        main_ui.treeDirs.collapseAll()
+        return
 
 
 def dirSelected(index, model, main_ui):
@@ -550,19 +443,6 @@ def getSelectedFiles(main_ui):
 
 def openFile(self, main_ui):
     debug.info("double clicked!!!")
-    # selectedFiles = getSelectedFiles(main_ui)
-
-    # files = []
-    # model = None
-    # selectedIndexes = None
-    # if main_ui.iconFiles.isVisible():
-    #     model = main_ui.iconFiles.model()
-    #     selectedIndexes = main_ui.iconFiles.selectedIndexes()
-    # elif main_ui.listFiles.isVisible():
-    #     model = main_ui.listFiles.model()
-    #     selectedIndexes = main_ui.listFiles.selectedIndexes()
-    # selectedItems = main_ui.listFiles.selectionModel().selectedIndexes()
-    # debug.info(selectedItems)
 
     model, selectedIndexes, selectedFiles = getSelectedFiles(main_ui)
     indexes = [i for i in selectedIndexes if i.column() == 0]
@@ -594,19 +474,8 @@ def openFile(self, main_ui):
                                    .format(os.path.join(projDir,"image-input.conf"),filePath)
                     elif suffix in textFormats:
                         openCmd = "leafpad '{0}' ".format(filePath)
-                    # else:
-                    #     messages(main_ui, "red", "no matches found")
-                    # elif formatOfSelected in videoFormats:
-                    #     # openCmd = "mpv " + selectedFilePath
-                    #     openCmd = "mpv '{0}' ".format(filePath)
-                    # elif formatOfSelected in musicFormats:
-                    #     openCmd = "qmmp '{0}' ".format(filePath)
-                    # else:
-                    #     openCmd = "xdg-open "+selectedFilePath
-                    # openCmd = "xdg-open "+selectedFilePath
+
                     debug.info(shlex.split(openCmd))
-                    # p = subprocess.Popen(shlex.split(openCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
-                    # subprocess.Popen(openCmd, shell=True)
                     if openCmd:
                         subprocess.Popen(shlex.split(openCmd))
                 except:
@@ -623,22 +492,6 @@ def popUpFiles(main_ui,context,pos):
     menu = QtWidgets.QMenu()
     setStyle(menu)
 
-    #REMINDER : DO NOT ADD OPEN WITH ACTION
-    #DONE : CHANGE DATE FORMAT
-    #DONE : DELETE OPTION
-    #DONE : RENAME OPTION
-    #DONE : ADD FAVOURITES TO SIDEPANE
-    #TODO : CUT OPTION
-    #TODO : TAB OPTION
-    #TODO : NEW FOLDER OPTION
-    #TODO : SEARCH
-    #TODO : DETAILS
-
-    # openWithMenu = QtWidgets.QMenu("Open With")
-    # setStyle(openWithMenu)
-    # mpv = openWithMenu.addAction("mpv player")
-    # menu.addMenu(openWithMenu)
-
     copyAction = menu.addAction("Copy")
     pasteAction = menu.addAction("Paste")
     addToFavAction = menu.addAction("Add To Favourites")
@@ -650,7 +503,6 @@ def popUpFiles(main_ui,context,pos):
     action = menu.exec_(context.mapToGlobal(pos))
     # path = os.path.abspath(main_ui.currentFolder.text().strip())
     # debug.info(path)
-
 
     if (action == copyAction):
         if (selectedFiles):
@@ -845,11 +697,6 @@ def mainGui(main_ui):
 
     modelDirs = setDir(ROOTDIRNEW, main_ui)
 
-    # threadPool = QtCore.QThreadPool()
-    # debug.info("Multithreading with maximum %d threads" % threadPool.maxThreadCount())
-    # openDirWorker = Worker(openDir(homeDir,main_ui))  # Any other args, kwargs are passed to the run function
-    # threadPool.start(openDirWorker)
-
     openDir(homeDir,main_ui)
 
     initConfig()
@@ -937,4 +784,3 @@ def mainFunc():
 if __name__ == '__main__':
     setproctitle.setproctitle("FILES")
     mainFunc()
-
