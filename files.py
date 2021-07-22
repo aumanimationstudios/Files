@@ -5,7 +5,6 @@ __license__ = "GPL"
 __email__ = "sanathshetty111@gmail.com"
 
 
-#REMINDER : DO NOT ADD OPEN WITH ACTION
 #DONE : CHANGE DATE FORMAT
 #DONE : DELETE OPTION
 #DONE : RENAME OPTION
@@ -45,8 +44,9 @@ from PyQt5.QtGui import *
 projDir = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])
 sys.path.append(projDir)
 
+rootDir = "/"
+homeDir = os.path.expanduser("~")
 
-# main_ui_file = os.path.join(projDir, "files.ui")
 main_ui_file = os.path.join(projDir, "files_2.ui")
 debug.info(main_ui_file)
 
@@ -56,15 +56,15 @@ audioFormats = ['mp3']
 textFormats = ['txt','py','sh','text','json']
 supportedFormats = ['mp4','mp3']
 
-renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server"]
-prohibitedDirs = ["/blueprod/STOR", "/proj", "/library"]
+renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
+cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
+pastePermittedDirs = ["/blueprod/CRAP/crap", "/crap/crap.server", homeDir] #REMINDER : Do NOT add bluepixels downloads folder
+deletePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
+prohibitedDirs = ["/blueprod/STOR", "/proj", "/library","/aumbackup"]
 
 parser = argparse.ArgumentParser(description="File viewer utility")
 parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder")
 args = parser.parse_args()
-
-rootDir = "/"
-homeDir = os.path.expanduser("~")
 
 confFile = homeDir+os.sep+".config"+os.sep+"files.json"
 
@@ -87,6 +87,8 @@ else:
 CUR_DIR_SELECTED = None
 listIcon = None
 iconsIcon = None
+
+cutFile = False
 
 
 class IconProvider(QtWidgets.QFileIconProvider):
@@ -308,6 +310,8 @@ def openListDir(dirPath, main_ui):
         # openIconDir(dirPath,main_ui)
     else:
         debug.info("Danger zone")
+        debug.info("Error! No permission to open.")
+        messages(main_ui, "red", "Error! No permission to open.")
         main_ui.treeDirs.itemsExpandable = False
         main_ui.treeDirs.collapseAll()
         return
@@ -341,6 +345,8 @@ def openIconDir(dirPath, main_ui):
         main_ui.iconFiles.setRootIndex(rootIdx)
     else:
         debug.info("Danger zone")
+        debug.info("Error! No permission to open.")
+        messages(main_ui, "red", "Error! No permission to open.")
         main_ui.treeDirs.itemsExpandable = False
         main_ui.treeDirs.collapseAll()
         return
@@ -484,6 +490,19 @@ def openFile(self, main_ui):
             debug.info(str(sys.exc_info()))
 
 
+# def popupTabs(main_ui,pos):
+#     debug.info("Tab Popup")
+#     menu = QtWidgets.QMenu()
+#     newTabAction = menu.addAction("New Tab")
+#     action = menu.exec_(main_ui.tabWidget.mapToGlobal(pos))
+#
+#     if(action==newTabAction):
+#         debug.info("New Tab")
+#         tab1 = QtWidgets.QWidget()
+#         tab1.setLayout(main_ui.verticalLayout)
+#         main_ui.tabWidget.addTab(tab1, "new")
+
+
 def popUpFiles(main_ui,context,pos):
     clip = QtWidgets.QApplication.clipboard()
     pasteUrls = clip.mimeData().urls()
@@ -492,7 +511,10 @@ def popUpFiles(main_ui,context,pos):
     menu = QtWidgets.QMenu()
     setStyle(menu)
 
+    # REMINDER : DO NOT ADD OPEN WITH ACTION
+
     copyAction = menu.addAction("Copy")
+    cutAction = menu.addAction("Cut")
     pasteAction = menu.addAction("Paste")
     addToFavAction = menu.addAction("Add To Favourites")
     renameAction = menu.addAction("Rename")
@@ -506,9 +528,12 @@ def popUpFiles(main_ui,context,pos):
 
     if (action == copyAction):
         if (selectedFiles):
-            copyToClipboard(main_ui)
+            copyFiles(main_ui)
+    if (action == cutAction):
+        if (selectedFiles):
+            cutFiles(main_ui)
     if (action == pasteAction):
-        pasteFilesFromClipboard(main_ui,pasteUrls)
+        pasteFiles(main_ui,pasteUrls)
     if (action == addToFavAction):
         if (selectedFiles):
             addToFavourites(main_ui)
@@ -520,19 +545,38 @@ def popUpFiles(main_ui,context,pos):
             deleteFiles(main_ui)
 
 
-def copyToClipboard(main_ui):
+def copyFiles(main_ui):
+    global cutFile
+    cutFile = False
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+
+    permitted = False
+    for x in cutCopyPermittedDirs:
+        if x in currDir:
+            permitted = True
+    if permitted:
     # sourcePath = os.path.abspath(main_ui.currentFolder.text().strip())
-    model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
-    urlList = []
-    mimeData = QtCore.QMimeData()
-    for x in selectedFiles:
-        debug.info("Copied "+x)
-        urlList.append(QtCore.QUrl().fromLocalFile(x))
-    mimeData.setUrls(urlList)
-    QtWidgets.QApplication.clipboard().setMimeData(mimeData)
+        model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
+        urlList = []
+        mimeData = QtCore.QMimeData()
+        for x in selectedFiles:
+            debug.info("Copied "+x)
+            urlList.append(QtCore.QUrl().fromLocalFile(x))
+        mimeData.setUrls(urlList)
+        QtWidgets.QApplication.clipboard().setMimeData(mimeData)
+    else:
+        debug.info("Error! No permission to copy.")
+        messages(main_ui, "red", "Error! No permission to copy.")
 
 
-def pasteFilesFromClipboard(main_ui,urls):
+def cutFiles(main_ui):
+    global cutFile
+    copyFiles(main_ui)
+    cutFile = True
+
+
+def pasteFiles(main_ui,urls):
+    global cutFile
     for url in urls:
         try:
             sourceFile = url.toLocalFile().encode('utf-8')
@@ -542,20 +586,42 @@ def pasteFilesFromClipboard(main_ui,urls):
                 destPath = os.path.abspath(destFolder)+"/"
                 # debug.info(destPath)
                 if destPath and os.path.exists(destPath):
-                    if "/opt/home/bluepixels" in destPath:
-                        debug.info("Danger Zone: Can not paste")
+                    permitted = False
+                    for x in pastePermittedDirs:
+                        if x in destPath:
+                            permitted = True
+                    if permitted:
+                        if "/opt/home/bluepixels" in destPath: #REMINDER : Do NOT remove this code.
+                            debug.info("Danger Zone: Can not paste")
+                            return
+                        else:
+                            pasteCmd = ""
+                            rmDirCmd = ""
+                            if cutFile:
+                                pasteCmd = "rsync --remove-source-files -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
+                                rmDirCmd = "rmdir '{0}' ".format(sourceFile)
+                            else:
+                                pasteCmd = "rsync -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
+                            debug.info(pasteCmd)
+                            messages(main_ui, "green", "Copying "+sourceFile)
+                            p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
+                            for line in iter(p.stdout.readline, b''):
+                                synData = (tuple(filter(None, line.strip().split(' '))))
+                                if synData:
+                                    prctg = synData[1].split("%")[0]
+                                    # debug.info(prctg)
+                                    main_ui.progressBar.show()
+                                    main_ui.progressBar.setValue(int(prctg))
+                            subprocess.Popen(shlex.split("sync"))
+                            if rmDirCmd:
+                                try:
+                                    subprocess.Popen(shlex.split(rmDirCmd))
+                                except:
+                                    debug.info(str(sys.exc_info()))
                     else:
-                        pasteCmd = "rsync -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
-                        debug.info(pasteCmd)
-                        messages(main_ui, "green", "Copying "+sourceFile)
-                        p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
-                        for line in iter(p.stdout.readline, b''):
-                            synData = (tuple(filter(None, line.strip().split(' '))))
-                            if synData:
-                                prctg = synData[1].split("%")[0]
-                                # debug.info(prctg)
-                                main_ui.progressBar.show()
-                                main_ui.progressBar.setValue(int(prctg))
+                        debug.info("Danger Zone: Can not paste")
+                        debug.info("Error! No permission to paste.")
+                        messages(main_ui, "red", "Error! No permission to paste.")
             main_ui.progressBar.hide()
             messages(main_ui, "white", "")
         except:
@@ -616,8 +682,12 @@ def renameUi(main_ui):
 def deleteFiles(main_ui):
     currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
     debug.info(currDir)
-    # if currDir == "/opt/home/bluepixels/Downloads":
-    if "/opt/home/bluepixels/Downloads" in currDir:
+    permitted = False
+    for x in deletePermittedDirs:
+        if x in currDir:
+            permitted = True
+    if permitted:
+    # if "/opt/home/bluepixels/Downloads" in currDir:
         model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
         fileNames = []
         indexes = [i for i in selectedIndexes if i.column() == 0]
@@ -638,12 +708,12 @@ def deleteFiles(main_ui):
         selection = confirm.exec_()
         if (selection == QtWidgets.QMessageBox.Yes):
             for x in selectedFiles:
-                if "/opt/home/bluepixels/Downloads/" in x:
-                    removeCmd = "rm -frv '{0}' ".format(x)
-                    debug.info(shlex.split(removeCmd))
-                    if removeCmd:
-                        subprocess.Popen(shlex.split(removeCmd))
-                        debug.info("Deleted "+x)
+                # if "/opt/home/bluepixels/Downloads/" in x:
+                removeCmd = "rm -frv '{0}' ".format(x)
+                debug.info(shlex.split(removeCmd))
+                if removeCmd:
+                    subprocess.Popen(shlex.split(removeCmd))
+                    debug.info("Deleted "+x)
     else:
         debug.info("Error! No permission to delete.")
         messages(main_ui,"red","Error! No permission to delete.")
@@ -746,6 +816,7 @@ def mainGui(main_ui):
     # main_ui.convertButton.clicked.connect(lambda self, main_ui = main_ui : startConvert(self, main_ui))
     # main_ui.outputFormat.currentIndexChanged.connect(lambda self, main_ui=main_ui: changeFormat(self, main_ui))
 
+    # main_ui.tabWidget.customContextMenuRequested.connect(lambda pos, main_ui=main_ui: popupTabs(main_ui,pos))
 
     main_ui.iconFiles.customContextMenuRequested.connect(lambda pos, context = main_ui.iconFiles.viewport(), main_ui = main_ui: popUpFiles(main_ui, context, pos))
     main_ui.iconFiles.doubleClicked.connect(lambda self, main_ui = main_ui : openFile(self, main_ui))
@@ -764,7 +835,6 @@ def mainGui(main_ui):
 
     main_ui.showMaximized()
     main_ui.update()
-
 
     qtRectangle = main_ui.frameGeometry()
     centerPoint = QtWidgets.QDesktopWidget().availableGeometry().center()
