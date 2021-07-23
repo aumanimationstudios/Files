@@ -9,11 +9,11 @@ __email__ = "sanathshetty111@gmail.com"
 #DONE : DELETE OPTION
 #DONE : RENAME OPTION
 #DONE : ADD FAVOURITES TO SIDEPANE
-#TODO : CUT OPTION
-#TODO : TAB OPTION
+#DONE : CUT OPTION
 #TODO : NEW FOLDER OPTION
 #TODO : SEARCH
 #TODO : DETAILS
+#TODO : TAB OPTION
 
 
 import debug
@@ -60,6 +60,7 @@ renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", 
 cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
 pastePermittedDirs = ["/blueprod/CRAP/crap", "/crap/crap.server", homeDir] #REMINDER : Do NOT add bluepixels downloads folder
 deletePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
+newFolderPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
 prohibitedDirs = ["/blueprod/STOR", "/proj", "/library","/aumbackup"]
 
 parser = argparse.ArgumentParser(description="File viewer utility")
@@ -516,6 +517,7 @@ def popUpFiles(main_ui,context,pos):
     copyAction = menu.addAction("Copy")
     cutAction = menu.addAction("Cut")
     pasteAction = menu.addAction("Paste")
+    newFolderAction = menu.addAction("New Folder")
     addToFavAction = menu.addAction("Add To Favourites")
     renameAction = menu.addAction("Rename")
     deleteAction = menu.addAction("Delete")
@@ -534,6 +536,8 @@ def popUpFiles(main_ui,context,pos):
             cutFiles(main_ui)
     if (action == pasteAction):
         pasteFiles(main_ui,pasteUrls)
+    if (action == newFolderAction):
+        createNewFolder(main_ui)
     if (action == addToFavAction):
         if (selectedFiles):
             addToFavourites(main_ui)
@@ -626,6 +630,25 @@ def pasteFiles(main_ui,urls):
             messages(main_ui, "white", "")
         except:
             debug.info(str(sys.exc_info()))
+
+
+def createNewFolder(main_ui):
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    debug.info(currDir)
+
+    permitted = False
+    for x in newFolderPermittedDirs:
+        if x in currDir:
+            permitted = True
+    if permitted:
+        newFolder = currDir+os.sep+"New_Folder"
+        newFolderCmd = "mkdir '{0}' ".format(newFolder)
+        debug.info(newFolderCmd)
+        subprocess.Popen(shlex.split(newFolderCmd))
+    else:
+        debug.info("Danger Zone: Can not create new folder")
+        debug.info("Error! No permission to create new folder.")
+        messages(main_ui, "red", "Error! No permission to create new folder.")
 
 
 def addToFavourites(main_ui):
