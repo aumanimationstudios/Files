@@ -10,7 +10,7 @@ __email__ = "sanathshetty111@gmail.com"
 #DONE : RENAME OPTION
 #DONE : ADD FAVOURITES TO SIDEPANE
 #DONE : CUT OPTION
-#TODO : NEW FOLDER OPTION
+#DONE : NEW FOLDER OPTION
 #TODO : SEARCH
 #TODO : DETAILS
 #TODO : TAB OPTION
@@ -76,6 +76,7 @@ places["Crap"] = "/blueprod/CRAP/crap"
 places["Downloads"] = homeDir+os.sep+"Downloads"
 
 rename = os.path.join(projDir, "rename.py")
+details = os.path.join(projDir, "details.py")
 
 app = None
 assPath = args.path
@@ -481,6 +482,8 @@ def openFile(self, main_ui):
                                    .format(os.path.join(projDir,"image-input.conf"),filePath)
                     elif suffix in textFormats:
                         openCmd = "leafpad '{0}' ".format(filePath)
+                    elif suffix == "pdf":
+                        openCmd = "pdfReader '{0}' ".format(filePath)
 
                     debug.info(shlex.split(openCmd))
                     if openCmd:
@@ -521,6 +524,7 @@ def popUpFiles(main_ui,context,pos):
     addToFavAction = menu.addAction("Add To Favourites")
     renameAction = menu.addAction("Rename")
     deleteAction = menu.addAction("Delete")
+    detailsAction = menu.addAction("Details")
 
     model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
     # debug.info(selectedFiles)
@@ -547,6 +551,9 @@ def popUpFiles(main_ui,context,pos):
     if (action == deleteAction):
         if (selectedFiles):
             deleteFiles(main_ui)
+    if (action == detailsAction):
+        if (selectedFiles):
+            showDetails(main_ui)
 
 
 def copyFiles(main_ui):
@@ -740,6 +747,26 @@ def deleteFiles(main_ui):
     else:
         debug.info("Error! No permission to delete.")
         messages(main_ui,"red","Error! No permission to delete.")
+
+
+def showDetails(main_ui):
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    debug.info(currDir)
+    model, selectedIndexes, selectedFiles = getSelectedFiles(main_ui)
+    debug.info(selectedFiles)
+    # files = " ".join(x for x in selectedFiles)
+    # detsCmd = "du -sch "+files
+    # debug.info(detsCmd)
+    # debug.info(shlex.split(detsCmd))
+    # detsCmd = ['du', '-ch', '--max-depth=1'] + selectedFiles
+    detsCmd = ['du', '-sch'] + selectedFiles
+    debug.info(detsCmd)
+    # p = subprocess.Popen(detsCmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True)
+    # for line in iter(p.stdout.readline, b''):
+    #     debug.info(line)
+    cmd = sys.executable + " " + details + " --command \"{0}\" ".format(detsCmd)
+    debug.info(cmd)
+    subprocess.Popen(shlex.split(cmd))
 
 
 def messages(main_ui,color,msg):
