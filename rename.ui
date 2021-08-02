@@ -24,7 +24,20 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="nameBox"/>
+      <widget class="QLineEdit" name="nameBox">
+       <property name="focusPolicy">
+        <enum>Qt::StrongFocus</enum>
+       </property>
+       <property name="frame">
+        <bool>true</bool>
+       </property>
+       <property name="cursorMoveStyle">
+        <enum>Qt::LogicalMoveStyle</enum>
+       </property>
+       <property name="clearButtonEnabled">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -45,6 +58,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="cancelButton">
+       <property name="focusPolicy">
+        <enum>Qt::ClickFocus</enum>
+       </property>
        <property name="text">
         <string>Cancel</string>
        </property>
@@ -52,6 +68,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="renameButton">
+       <property name="focusPolicy">
+        <enum>Qt::ClickFocus</enum>
+       </property>
        <property name="text">
         <string>Rename</string>
        </property>

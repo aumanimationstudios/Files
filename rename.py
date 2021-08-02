@@ -53,6 +53,9 @@ def mainGui(main_ui):
         except:
             debug.info(str(sys.exc_info()))
 
+    main_ui.renameButton.setShortcut(QtGui.QKeySequence("Return"))
+    main_ui.nameBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "clear_icon.svg")))
+
     main_ui.cancelButton.clicked.connect((lambda self, main_ui = main_ui : closeEvent(self, main_ui)))
     main_ui.renameButton.clicked.connect((lambda self, main_ui = main_ui : rename(self, main_ui)))
 
@@ -71,7 +74,7 @@ def rename(self,main_ui):
         debug.info(args.name)
         debug.info(newName)
         debug.info(args.path)
-        cmd = "mv '{0}' '{1}' ".format(args.path+os.sep+args.name, args.path+os.sep+newName)
+        cmd = "mv \"{0}\" \"{1}\" ".format(args.path+os.sep+args.name, args.path+os.sep+newName)
         debug.info(cmd)
         subprocess.Popen(shlex.split(cmd))
         main_ui.close()

@@ -11,8 +11,8 @@ __email__ = "sanathshetty111@gmail.com"
 #DONE : ADD FAVOURITES TO SIDEPANE
 #DONE : CUT OPTION
 #DONE : NEW FOLDER OPTION
+#DONE : DETAILS
 #TODO : SEARCH
-#TODO : DETAILS
 #TODO : TAB OPTION
 
 
@@ -53,7 +53,7 @@ debug.info(main_ui_file)
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
 videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV']
 audioFormats = ['mp3']
-textFormats = ['txt','py','sh','text','json']
+textFormats = ['txt','py','sh','text','json','conf','yml','log']
 supportedFormats = ['mp4','mp3']
 
 renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
@@ -285,14 +285,17 @@ def openListDir(dirPath, main_ui):
     CUR_DIR_SELECTED = dirPath.strip()
     debug.info(CUR_DIR_SELECTED)
 
+    searchTerm = main_ui.searchBox.text().strip()
+    # debug.info(searchTerm)
+
     permitted = True
     for x in prohibitedDirs:
         if x in CUR_DIR_SELECTED:
             permitted = False
     if permitted:
         main_ui.treeDirs.itemsExpandable = True
-        main_ui.currentFolder.clear()
-        main_ui.currentFolder.setText(CUR_DIR_SELECTED)
+        main_ui.currentFolderBox.clear()
+        main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
         modelFiles = main_ui.listFiles.model()
         if not modelFiles:
@@ -301,8 +304,12 @@ def openListDir(dirPath, main_ui):
             # modelFiles.setIconProvider(CustomIconProvider())
             main_ui.listFiles.setModel(modelFiles)
         modelFiles.setRootPath(CUR_DIR_SELECTED)
-        # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
-        # modelFiles.setFilter(QtCore.QDir.NoDotAndDotDot)
+
+        modelFiles.setFilter(QtCore.QDir.Dirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
+        modelFiles.setNameFilters([searchTerm+"*"])
+        modelFiles.setNameFilterDisables(False)
+        debug.info(modelFiles.nameFilters())
+
         rootIdx = modelFiles.index(CUR_DIR_SELECTED)
 
         main_ui.listFiles.setRootIndex(rootIdx)
@@ -324,14 +331,18 @@ def openIconDir(dirPath, main_ui):
 
     CUR_DIR_SELECTED = dirPath.strip()
     debug.info(CUR_DIR_SELECTED)
+
+    searchTerm = main_ui.searchBox.text().strip()
+    # debug.info(searchTerm)
+
     permitted = True
     for x in prohibitedDirs:
         if x in CUR_DIR_SELECTED:
             permitted = False
     if permitted:
         main_ui.treeDirs.itemsExpandable = True
-        main_ui.currentFolder.clear()
-        main_ui.currentFolder.setText(CUR_DIR_SELECTED)
+        main_ui.currentFolderBox.clear()
+        main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
         modelFiles = main_ui.iconFiles.model()
         if not modelFiles:
@@ -340,8 +351,12 @@ def openIconDir(dirPath, main_ui):
             # modelFiles.setIconProvider(CustomIconProvider())
             main_ui.iconFiles.setModel(modelFiles)
         modelFiles.setRootPath(CUR_DIR_SELECTED)
-        # modelFiles.setFilter(QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
-        # modelFiles.setFilter(QtCore.QDir.NoDotAndDotDot)
+
+        modelFiles.setFilter(QtCore.QDir.Dirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
+        modelFiles.setNameFilters([searchTerm + "*"])
+        modelFiles.setNameFilterDisables(False)
+        debug.info(modelFiles.nameFilters())
+
         rootIdx = modelFiles.index(CUR_DIR_SELECTED)
 
         main_ui.iconFiles.setRootIndex(rootIdx)
@@ -359,7 +374,7 @@ def dirSelected(index, model, main_ui):
     openDir(dirPath,main_ui)
 
 # def copyPath(self, main_ui):
-#     path = main_ui.currentFolder.text().strip()
+#     path = main_ui.currentFolderBox.text().strip()
 #     # main_ui.outputFolder.clear()
 #     # main_ui.outputFolder.setText(path)
 #     pyperclip.copy(path)
@@ -369,8 +384,8 @@ def dirSelected(index, model, main_ui):
 #     path = pyperclip.paste()
 #     if path != None:
 #         debug.info(path)
-#         main_ui.currentFolder.clear()
-#         main_ui.currentFolder.setText(path.strip())
+#         main_ui.currentFolderBox.clear()
+#         main_ui.currentFolderBox.setText(path.strip())
 #     else:
 #         pass
 
@@ -394,7 +409,7 @@ def changeView(self, main_ui):
 
 def previousDir(self, main_ui):
     # debug.info("previous directory")
-    ROOTDIR = main_ui.currentFolder.text().strip().encode('utf-8')
+    ROOTDIR = main_ui.currentFolderBox.text().strip().encode('utf-8')
     if ROOTDIR != "":
         if os.path.exists(ROOTDIR):
             ROOTDIRNEW = os.sep.join(ROOTDIR.split(os.sep)[:-1])
@@ -407,7 +422,7 @@ def previousDir(self, main_ui):
 
 
 def changeDir(self, main_ui):
-    ROOTDIR = main_ui.currentFolder.text().strip().encode('utf-8')
+    ROOTDIR = main_ui.currentFolderBox.text().strip().encode('utf-8')
     if ROOTDIR != "":
         ROOTDIRNEW = os.path.abspath(os.path.expanduser(ROOTDIR))
         # home = os.path.expanduser(ROOTDIR)
@@ -420,8 +435,13 @@ def changeDir(self, main_ui):
             messages(main_ui,"red","No such folder!")
 
 
+def search(self, main_ui):
+    ROOTDIR = main_ui.currentFolderBox.text().strip().encode('utf-8')
+    openDir(ROOTDIR, main_ui)
+
+
 def clearPath(self, main_ui):
-    main_ui.currentFolder.clear()
+    main_ui.currentFolderBox.clear()
 
 
 def getSelectedFiles(main_ui):
@@ -475,15 +495,15 @@ def openFile(self, main_ui):
                     debug.info(suffix)
                     openCmd = ""
                     if suffix in videoFormats+audioFormats:
-                        openCmd = "mpv --screenshot-directory=/tmp/ --input-conf={0} '{1}' ".format(os.path.join(projDir,"video-input.conf"),filePath)
+                        openCmd = "mpv --screenshot-directory=/tmp/ --input-conf={0} \"{1}\" ".format(os.path.join(projDir,"video-input.conf"),filePath)
                     elif (suffix in imageFormats):
                         # openCmd = projDir+os.sep+"mediaPlayer.py --path '{0}' ".format(filePath)
-                        openCmd = "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} '{1}' "\
+                        openCmd = "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} \"{1}\" "\
                                    .format(os.path.join(projDir,"image-input.conf"),filePath)
                     elif suffix in textFormats:
-                        openCmd = "leafpad '{0}' ".format(filePath)
+                        openCmd = "leafpad \"{0}\" ".format(filePath)
                     elif suffix == "pdf":
-                        openCmd = "pdfReader '{0}' ".format(filePath)
+                        openCmd = "pdfReader \"{0}\" ".format(filePath)
 
                     debug.info(shlex.split(openCmd))
                     if openCmd:
@@ -529,7 +549,7 @@ def popUpFiles(main_ui,context,pos):
     model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
     # debug.info(selectedFiles)
     action = menu.exec_(context.mapToGlobal(pos))
-    # path = os.path.abspath(main_ui.currentFolder.text().strip())
+    # path = os.path.abspath(main_ui.currentFolderBox.text().strip())
     # debug.info(path)
 
     if (action == copyAction):
@@ -559,14 +579,14 @@ def popUpFiles(main_ui,context,pos):
 def copyFiles(main_ui):
     global cutFile
     cutFile = False
-    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())).encode('utf-8'))
 
     permitted = False
     for x in cutCopyPermittedDirs:
         if x in currDir:
             permitted = True
     if permitted:
-    # sourcePath = os.path.abspath(main_ui.currentFolder.text().strip())
+    # sourcePath = os.path.abspath(main_ui.currentFolderBox.text().strip())
         model,selectedIndexes,selectedFiles = getSelectedFiles(main_ui)
         urlList = []
         mimeData = QtCore.QMimeData()
@@ -591,7 +611,7 @@ def pasteFiles(main_ui,urls):
     for url in urls:
         try:
             sourceFile = url.toLocalFile().encode('utf-8')
-            destFolder = main_ui.currentFolder.text().strip().encode('utf-8')
+            destFolder = main_ui.currentFolderBox.text().strip().encode('utf-8')
             # debug.info(destFolder)
             if destFolder:
                 destPath = os.path.abspath(destFolder)+"/"
@@ -609,10 +629,10 @@ def pasteFiles(main_ui,urls):
                             pasteCmd = ""
                             rmDirCmd = ""
                             if cutFile:
-                                pasteCmd = "rsync --remove-source-files -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
-                                rmDirCmd = "rmdir '{0}' ".format(sourceFile)
+                                pasteCmd = "rsync --remove-source-files -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
+                                rmDirCmd = "rmdir \"{0}\" ".format(sourceFile)
                             else:
-                                pasteCmd = "rsync -azHXW --info=progress2 '{0}' '{1}' ".format(sourceFile,destPath)
+                                pasteCmd = "rsync -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
                             debug.info(pasteCmd)
                             messages(main_ui, "green", "Copying "+sourceFile)
                             p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
@@ -640,7 +660,7 @@ def pasteFiles(main_ui,urls):
 
 
 def createNewFolder(main_ui):
-    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())).encode('utf-8'))
     debug.info(currDir)
 
     permitted = False
@@ -649,7 +669,7 @@ def createNewFolder(main_ui):
             permitted = True
     if permitted:
         newFolder = currDir+os.sep+"New_Folder"
-        newFolderCmd = "mkdir '{0}' ".format(newFolder)
+        newFolderCmd = "mkdir \"{0}\" ".format(newFolder)
         debug.info(newFolderCmd)
         subprocess.Popen(shlex.split(newFolderCmd))
     else:
@@ -660,7 +680,7 @@ def createNewFolder(main_ui):
 
 def addToFavourites(main_ui):
     global places
-    # currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    # currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())).encode('utf-8'))
     model, selectedIndexes, selectedFiles = getSelectedFiles(main_ui)
 
     indexes = [i for i in selectedIndexes if i.column() == 0]
@@ -680,7 +700,7 @@ def addToFavourites(main_ui):
 
 
 def renameUi(main_ui):
-    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())).encode('utf-8'))
     model, selectedIndexes, selectedFiles = getSelectedFiles(main_ui)
 
     fileDets = {}
@@ -701,7 +721,7 @@ def renameUi(main_ui):
 
         if (len(fileDets)) == 1:
             for key, value in fileDets.items():
-                cmd = sys.executable+" "+rename+" --name '{0}' --path '{1}' ".format(key,currDir)
+                cmd = sys.executable+" "+rename+" --name \"{0}\" --path \"{1}\" ".format(key,currDir)
                 debug.info(cmd)
                 subprocess.Popen(shlex.split(cmd))
     else:
@@ -710,7 +730,7 @@ def renameUi(main_ui):
 
 
 def deleteFiles(main_ui):
-    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())).encode('utf-8'))
     debug.info(currDir)
     permitted = False
     for x in deletePermittedDirs:
@@ -732,6 +752,8 @@ def deleteFiles(main_ui):
         setStyle(confirm)
         # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
         confirm.setWindowTitle("Warning!")
+        # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
+        confirm.setIconPixmap(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png")))
         confirm.setText("<b>Permanently Delete these item(s)?</b>"+"\n")
         confirm.setInformativeText(",\n".join(i for i in fileNames))
         confirm.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
@@ -739,7 +761,7 @@ def deleteFiles(main_ui):
         if (selection == QtWidgets.QMessageBox.Yes):
             for x in selectedFiles:
                 # if "/opt/home/bluepixels/Downloads/" in x:
-                removeCmd = "rm -frv '{0}' ".format(x)
+                removeCmd = "rm -frv \"{0}\" ".format(x)
                 debug.info(shlex.split(removeCmd))
                 if removeCmd:
                     subprocess.Popen(shlex.split(removeCmd))
@@ -750,20 +772,15 @@ def deleteFiles(main_ui):
 
 
 def showDetails(main_ui):
-    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolder.text().strip())).encode('utf-8'))
+    currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())).encode('utf-8'))
     debug.info(currDir)
     model, selectedIndexes, selectedFiles = getSelectedFiles(main_ui)
     debug.info(selectedFiles)
-    # files = " ".join(x for x in selectedFiles)
-    # detsCmd = "du -sch "+files
-    # debug.info(detsCmd)
-    # debug.info(shlex.split(detsCmd))
+
     # detsCmd = ['du', '-ch', '--max-depth=1'] + selectedFiles
     detsCmd = ['du', '-sch'] + selectedFiles
     debug.info(detsCmd)
-    # p = subprocess.Popen(detsCmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True)
-    # for line in iter(p.stdout.readline, b''):
-    #     debug.info(line)
+
     cmd = sys.executable + " " + details + " --command \"{0}\" ".format(detsCmd)
     debug.info(cmd)
     subprocess.Popen(shlex.split(cmd))
@@ -806,13 +823,13 @@ def mainGui(main_ui):
     main_ui.setStyleSheet(sS.read())
     sS.close()
 
-    main_ui.currentFolder.clear()
-    main_ui.currentFolder.setText(ROOTDIR)
+    main_ui.currentFolderBox.clear()
+    main_ui.currentFolderBox.setText(ROOTDIR)
 
     main_ui.treeDirs.sortByColumn(0, QtCore.Qt.AscendingOrder)
     main_ui.listFiles.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
-    ROOTDIRNEW = os.path.abspath(main_ui.currentFolder.text().strip()).encode('utf-8')
+    ROOTDIRNEW = os.path.abspath(main_ui.currentFolderBox.text().strip()).encode('utf-8')
     debug.info(ROOTDIRNEW)
 
     modelDirs = setDir(ROOTDIRNEW, main_ui)
@@ -825,9 +842,10 @@ def mainGui(main_ui):
     listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
     iconsIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_icons.png"))
     prevDirIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "arrow-up-1.png"))
-    goIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "arrow-right-1.png"))
-    clearIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "clear-icon-1.png"))
+    goIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "arrow-down-1.png"))
+    searchIcon = os.path.join(projDir, "imageFiles", "search_icon.svg")
 
+    # clearIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "clear-icon-1.png"))
     # copyIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "copy-icon-1.png"))
     # pasteIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "paste-icon-1.png"))
 
@@ -836,17 +854,21 @@ def mainGui(main_ui):
     main_ui.changeViewButt.setIcon(QtGui.QIcon(iconsIcon))
     main_ui.previousDirButt.setIcon(QtGui.QIcon(prevDirIcon))
     main_ui.changeDirButt.setIcon(QtGui.QIcon(goIcon))
-    main_ui.clearPathButt.setIcon(QtGui.QIcon(clearIcon))
+    main_ui.searchButt.setIcon(QtGui.QIcon(searchIcon))
+    # main_ui.clearPathButt.setIcon(QtGui.QIcon(clearIcon))
+
+    main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "clear_icon.svg")))
+    main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "clear_icon.svg")))
 
     main_ui.changeViewButt.setShortcut(QtGui.QKeySequence("V"))
     main_ui.previousDirButt.setShortcut(QtGui.QKeySequence("Backspace"))
     main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
-    main_ui.clearPathButt.setShortcut(QtGui.QKeySequence("Delete"))
+    # main_ui.clearPathButt.setShortcut(QtGui.QKeySequence("Delete"))
 
     main_ui.changeViewButt.setToolTip("Change View (V)")
     main_ui.previousDirButt.setToolTip("Previous Directory (Backspace)")
     main_ui.changeDirButt.setToolTip("Change Directory (Enter)")
-    main_ui.clearPathButt.setToolTip("Clear Path (Delete)")
+    # main_ui.clearPathButt.setToolTip("Clear Path (Delete)")
 
     # main_ui.copyButton.setToolTip("Copy to Clipboard")
     # main_ui.pasteButton.setToolTip("Paste from Clipboard")
@@ -857,12 +879,14 @@ def mainGui(main_ui):
     # main_ui.pasteButton.hide()
 
     main_ui.treeDirs.clicked.connect(lambda index, modelDirs=modelDirs, main_ui = main_ui : dirSelected(index, modelDirs, main_ui))
+    main_ui.searchBox.textChanged.connect(lambda self, main_ui = main_ui : search(self, main_ui))
     # main_ui.copyButton.clicked.connect(lambda self, main_ui = main_ui : copyPath(self, main_ui))
     # main_ui.pasteButton.clicked.connect(lambda self, main_ui = main_ui : pastePath(self, main_ui))
     main_ui.changeViewButt.clicked.connect(lambda self, main_ui = main_ui : changeView(self, main_ui))
     main_ui.previousDirButt.clicked.connect(lambda self, main_ui = main_ui : previousDir(self, main_ui))
     main_ui.changeDirButt.clicked.connect(lambda self, main_ui = main_ui : changeDir(self, main_ui))
-    main_ui.clearPathButt.clicked.connect(lambda self, main_ui = main_ui : clearPath(self, main_ui))
+    main_ui.searchButt.clicked.connect(lambda self, main_ui = main_ui : search(self, main_ui))
+    # main_ui.clearPathButt.clicked.connect(lambda self, main_ui = main_ui : clearPath(self, main_ui))
     # main_ui.convertButton.clicked.connect(lambda self, main_ui = main_ui : startConvert(self, main_ui))
     # main_ui.outputFormat.currentIndexChanged.connect(lambda self, main_ui=main_ui: changeFormat(self, main_ui))
 

@@ -47,17 +47,15 @@ def mainGui(main_ui):
     sS.close()
 
     if (args.command):
-        # debug.info(args.command)
+        debug.info(args.command)
         # detsCmd = args.command.strip('][').split(', ')
         detsCmd = ast.literal_eval(args.command)
         debug.info(detsCmd)
         p = subprocess.Popen(detsCmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True)
+        main_ui.textEdit.append("Size             Name\n")
         for line in iter(p.stdout.readline, b''):
             debug.info(line)
             main_ui.textEdit.append(line)
-
-    # main_ui.cancelButton.clicked.connect((lambda self, main_ui = main_ui : closeEvent(self, main_ui)))
-    # main_ui.renameButton.clicked.connect((lambda self, main_ui = main_ui : rename(self, main_ui)))
 
     main_ui.show()
     main_ui.update()
