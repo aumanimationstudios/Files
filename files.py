@@ -12,7 +12,8 @@ __email__ = "sanathshetty111@gmail.com"
 #DONE : CUT OPTION
 #DONE : NEW FOLDER OPTION
 #DONE : DETAILS
-#TODO : SEARCH
+#DONE : SEARCH
+#TODO : REPLACE WARNING
 #TODO : TAB OPTION
 
 
@@ -52,7 +53,7 @@ debug.info(main_ui_file)
 
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
 videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV']
-audioFormats = ['mp3']
+audioFormats = ['mp3','aac']
 textFormats = ['txt','py','sh','text','json','conf','yml','log']
 supportedFormats = ['mp4','mp3']
 
@@ -109,9 +110,15 @@ class IconProvider(QtWidgets.QFileIconProvider):
             return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_icon.svg"))
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
 
+
 # class CustomIconProvider(QtWidgets.QFileIconProvider):
 #     def icon(self, fileInfo):
+#         debug.info(fileInfo.filePath())
+#         # filePath = fileInfo.absoluteFilePath()
+#         # pathSelected = os.path.relpath(fileInfo.absolutePath(), CUR_DIR_SELECTED)
+#         # fName = os.path.basename(filePath)
 #         return QtGui.QIcon()
+
 
 class FSM4Files(QtWidgets.QFileSystemModel):
 
@@ -612,6 +619,9 @@ def pasteFiles(main_ui,urls):
         try:
             sourceFile = url.toLocalFile().encode('utf-8')
             destFolder = main_ui.currentFolderBox.text().strip().encode('utf-8')
+            sourceFileName = os.path.basename(sourceFile)
+            debug.info(sourceFile)
+            debug.info(sourceFileName)
             # debug.info(destFolder)
             if destFolder:
                 destPath = os.path.abspath(destFolder)+"/"
@@ -626,35 +636,39 @@ def pasteFiles(main_ui,urls):
                             debug.info("Danger Zone: Can not paste")
                             return
                         else:
-                            pasteCmd = ""
-                            rmDirCmd = ""
-                            if cutFile:
-                                pasteCmd = "rsync --remove-source-files -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
-                                rmDirCmd = "rmdir \"{0}\" ".format(sourceFile)
+                            if os.path.exists(destPath+sourceFileName):
+                                debug.info("File already exists")
+                                messages(main_ui, "red", "File already exists")
                             else:
-                                pasteCmd = "rsync -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
-                            debug.info(pasteCmd)
-                            messages(main_ui, "green", "Copying "+sourceFile)
-                            p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
-                            for line in iter(p.stdout.readline, b''):
-                                synData = (tuple(filter(None, line.strip().split(' '))))
-                                if synData:
-                                    prctg = synData[1].split("%")[0]
-                                    # debug.info(prctg)
-                                    main_ui.progressBar.show()
-                                    main_ui.progressBar.setValue(int(prctg))
-                            subprocess.Popen(shlex.split("sync"))
-                            if rmDirCmd:
-                                try:
-                                    subprocess.Popen(shlex.split(rmDirCmd))
-                                except:
-                                    debug.info(str(sys.exc_info()))
+                                pasteCmd = ""
+                                rmDirCmd = ""
+                                if cutFile:
+                                    pasteCmd = "rsync --remove-source-files -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
+                                    rmDirCmd = "rmdir \"{0}\" ".format(sourceFile)
+                                else:
+                                    pasteCmd = "rsync -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
+                                debug.info(pasteCmd)
+                                messages(main_ui, "green", "Copying "+sourceFile)
+                                p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
+                                for line in iter(p.stdout.readline, b''):
+                                    synData = (tuple(filter(None, line.strip().split(' '))))
+                                    if synData:
+                                        prctg = synData[1].split("%")[0]
+                                        # debug.info(prctg)
+                                        main_ui.progressBar.show()
+                                        main_ui.progressBar.setValue(int(prctg))
+                                subprocess.Popen(shlex.split("sync"))
+                                if rmDirCmd:
+                                    try:
+                                        subprocess.Popen(shlex.split(rmDirCmd))
+                                    except:
+                                        debug.info(str(sys.exc_info()))
                     else:
                         debug.info("Danger Zone: Can not paste")
                         debug.info("Error! No permission to paste.")
                         messages(main_ui, "red", "Error! No permission to paste.")
             main_ui.progressBar.hide()
-            messages(main_ui, "white", "")
+            # messages(main_ui, "white", "")
         except:
             debug.info(str(sys.exc_info()))
 
