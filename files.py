@@ -492,6 +492,7 @@ def openFile(self, main_ui):
 
             if fileInfo.isDir():
                 debug.info("This is a directory!")
+                main_ui.searchBox.clear()
                 openDir(filePath, main_ui)
 
             if fileInfo.isFile():
