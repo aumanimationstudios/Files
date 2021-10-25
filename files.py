@@ -34,6 +34,7 @@ import threading
 import traceback
 import pathlib
 import json
+import vignette
 
 from PyQt5.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem
 from PyQt5 import QtCore, uic, QtGui, QtWidgets
@@ -94,17 +95,74 @@ iconsIcon = None
 cutFile = False
 
 
+
+class WorkerSignals(QtCore.QObject):
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+    progress = pyqtSignal(int)
+
+
+class Worker(QtCore.QRunnable):
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+        self.kwargs['progress_callback'] = self.signals.progress
+
+    @pyqtSlot()
+    def run(self):
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        else:
+            self.signals.result.emit(result)
+        finally:
+            self.signals.finished.emit()
+
+
 class IconProvider(QtWidgets.QFileIconProvider):
     def icon(self, fileInfo):
         # if fileInfo.isDir():
         #     return QtGui.QIcon(os.path.join(projDir, "imageFiles", "folder_icon.svg"))
         if fileInfo.isFile():
             if fileInfo.suffix() in videoFormats:
-                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_video_icon.svg"))
+                filePath = fileInfo.filePath()
+                fileName = fileInfo.fileName()
+                thumb_image = homeDir+"/.cache/thumbnails/normal/"+fileName+".jpg"
+                if os.path.exists(thumb_image):
+                    return QtGui.QIcon(thumb_image)
+                else:
+                    if fileName.startswith("."):
+                        pass
+                    else:
+                        try:
+                            # subprocess.call(['ffmpeg', '-i', filePath, '-ss', '00:00:00.000', '-vframes', '1', thumb_image, '-y'])
+                            # subprocess.call(['ffmpeg', '-v', 'quiet', '-ss', '3', '-i', filePath, '-frames:v', '5', '-r', '1/10', '-vsync', 'vfr', thumb_image, '-y'])
+                            genThumbCmd = "ffmpeg -i \"{0}\" -ss 00:00:00.000 -vframes 1 \"{1}\" -y ".format(filePath,thumb_image)
+                            # debug.info(genThumbCmd)
+                            subprocess.call(shlex.split(genThumbCmd))
+                        except:
+                            debug.info(str(sys.exc_info()))
+                            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_video_icon.svg"))
+                        debug.info(thumb_image)
+                        return QtGui.QIcon(thumb_image)
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_video_icon.svg"))
             if fileInfo.suffix() in audioFormats:
                 return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_audio_icon.svg"))
             if fileInfo.suffix() in imageFormats:
-                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_image_icon.svg"))
+                filePath = fileInfo.filePath()
+                thumb_image = vignette.try_get_thumbnail(filePath, 128)
+                if not thumb_image:
+                    thumb_image = vignette.create_thumbnail(filePath, 128)
+                debug.info(thumb_image)
+                return QtGui.QIcon(thumb_image)
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_image_icon.svg"))
             if fileInfo.suffix() in textFormats:
                 return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_files_icon.svg"))
             return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_icon.svg"))
@@ -260,6 +318,7 @@ def setDir(ROOTDIRNEW, main_ui):
         main_ui.treeDirs.itemsExpandable = False
         main_ui.treeDirs.collapseAll()
     else:
+        messages(main_ui,"green","Generating thumbnails")
         main_ui.treeDirs.itemsExpandable = True
         modelDirs = FSM(parent=main_ui)
         modelDirs.setIconProvider(IconProvider())
@@ -285,6 +344,13 @@ def openDir(dirPath, main_ui):
     openListDir(dirPath,main_ui)
     openIconDir(dirPath, main_ui)
 
+    # threadpool = QtCore.QThreadPool()
+    # # debug.info("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+    # worker1 = Worker(openListDir,dirPath,main_ui)
+    # worker2 = Worker(openIconDir,dirPath,main_ui)
+    # threadpool.start(worker1)
+    # threadpool.start(worker2)
+
 
 def openListDir(dirPath, main_ui):
     global CUR_DIR_SELECTED
@@ -300,6 +366,7 @@ def openListDir(dirPath, main_ui):
         if x in CUR_DIR_SELECTED:
             permitted = False
     if permitted:
+        messages(main_ui, "green", "Generating thumbnails")
         main_ui.treeDirs.itemsExpandable = True
         main_ui.currentFolderBox.clear()
         main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
@@ -324,6 +391,7 @@ def openListDir(dirPath, main_ui):
         main_ui.listFiles.setItemDelegateForColumn(3, DateFormatDelegate())
         # main_ui.listFiles.setItemDelegateForColumn(3,DateFormatDelegate('dd/MM/yyyy'))
         # openIconDir(dirPath,main_ui)
+        return
     else:
         debug.info("Danger zone")
         debug.info("Error! No permission to open.")
@@ -347,6 +415,7 @@ def openIconDir(dirPath, main_ui):
         if x in CUR_DIR_SELECTED:
             permitted = False
     if permitted:
+        messages(main_ui, "green", "Generating thumbnails")
         main_ui.treeDirs.itemsExpandable = True
         main_ui.currentFolderBox.clear()
         main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
@@ -367,6 +436,7 @@ def openIconDir(dirPath, main_ui):
         rootIdx = modelFiles.index(CUR_DIR_SELECTED)
 
         main_ui.iconFiles.setRootIndex(rootIdx)
+        return
     else:
         debug.info("Danger zone")
         debug.info("Error! No permission to open.")
