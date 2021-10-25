@@ -34,7 +34,6 @@ import threading
 import traceback
 import pathlib
 import json
-import vignette
 from PIL import Image
 from multiprocessing import Pool
 
