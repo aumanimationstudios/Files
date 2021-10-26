@@ -31,6 +31,9 @@
        <property name="frame">
         <bool>true</bool>
        </property>
+       <property name="cursorPosition">
+        <number>0</number>
+       </property>
        <property name="cursorMoveStyle">
         <enum>Qt::LogicalMoveStyle</enum>
        </property>

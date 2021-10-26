@@ -53,6 +53,7 @@ def mainGui(main_ui):
         except:
             debug.info(str(sys.exc_info()))
 
+    main_ui.nameBox.setCursorPosition(0)
     main_ui.renameButton.setShortcut(QtGui.QKeySequence("Return"))
     main_ui.nameBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "clear_icon.svg")))
 
