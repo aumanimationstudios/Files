@@ -207,6 +207,7 @@ class filesWidget():
         sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
         self.main_ui.setStyleSheet(sS.read())
         sS.close()
+        os.environ['HR_THEME'] = "dark"
 
         self.main_ui.currentFolderBox.clear()
         self.main_ui.currentFolderBox.setText(ROOTDIR)
@@ -224,10 +225,11 @@ class filesWidget():
         self.initConfig()
         self.loadFavourites()
 
-        listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
-        iconsIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_icons.png"))
-        prevDirIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "arrow-up-1.png"))
-        goIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "arrow-down-1.png"))
+        # listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
+        listIcon = os.path.join(projDir, "imageFiles", "view_list_blue.svg")
+        iconsIcon = os.path.join(projDir, "imageFiles", "view_icons_blue.svg")
+        prevDirIcon = os.path.join(projDir, "imageFiles", "go_up_blue.svg")
+        goIcon = os.path.join(projDir, "imageFiles", "go_down_blue.svg")
         searchIcon = os.path.join(projDir, "imageFiles", "search_icon.svg")
 
         self.main_ui.changeViewButt.setIcon(QtGui.QIcon(iconsIcon))
@@ -248,6 +250,7 @@ class filesWidget():
         self.main_ui.previousDirButt.setToolTip("Previous Directory (Backspace)")
         self.main_ui.changeDirButt.setToolTip("Change Directory (Enter)")
 
+        self.main_ui.themeButton.clicked.connect(self.changeTheme)
         self.main_ui.treeDirs.clicked.connect(lambda x, modelDirs=modelDirs: self.dirSelected(x, modelDirs))
         self.main_ui.searchBox.textChanged.connect(lambda x : self.search())
         self.main_ui.changeViewButt.clicked.connect(lambda x : self.changeView())
@@ -267,10 +270,6 @@ class filesWidget():
         self.main_ui.v_splitter2.setSizes([100, 2000])
         self.main_ui.h_splitter.setSizes([400, 1000])
         self.main_ui.listFiles.setColumnWidth(0, 400)
-
-        # self.main_ui.frame_1.setContentsMargins(0,0,0,0)
-        # self.main_ui.frame_2.setContentsMargins(0,0,0,0)
-        # self.main_ui.infoFrame.setContentsMargins(0,0,0,0)
 
         self.main_ui.iconFiles.hide()
 
@@ -426,17 +425,8 @@ class filesWidget():
         self.openListDir(dirPath)
         self.openIconDir(dirPath)
 
-        # self.threadpool = QtCore.QThreadPool()
-        # debug.info("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
         worker = Worker(self.genThumb,dirPath)
-        # worker.signals.finished.connect(lambda dir_path=dirPath: self.refreshDir(dir_path))
         self.threadpool.start(worker)
-
-
-    # def refreshDir(self, dirPath):
-    #     self.clearAllSelection()
-    #     self.openListDir(dirPath)
-    #     self.openIconDir(dirPath)
 
 
     def genThumb(self, dirPath, progress_callback):
@@ -498,11 +488,8 @@ class filesWidget():
             self.main_ui.currentFolderBox.clear()
             self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
-            # modelFiles = self.main_ui.listFiles.model()
-            # if not modelFiles:
             modelFiles = FSM(parent=self.main_ui)
             modelFiles.setIconProvider(IconProvider())
-            # modelFiles.setIconProvider(CustomIconProvider())
             self.main_ui.listFiles.setModel(modelFiles)
             modelFiles.setRootPath(CUR_DIR_SELECTED)
 
@@ -516,8 +503,6 @@ class filesWidget():
             self.main_ui.listFiles.setRootIndex(rootIdx)
 
             self.main_ui.listFiles.setItemDelegateForColumn(3, DateFormatDelegate())
-            # self.main_ui.listFiles.setItemDelegateForColumn(3,DateFormatDelegate('dd/MM/yyyy'))
-            # openIconDir(dirPath,self.main_ui)
             return
         else:
             debug.info("Danger zone")
@@ -547,11 +532,8 @@ class filesWidget():
             self.main_ui.currentFolderBox.clear()
             self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
-            # modelFiles = self.main_ui.iconFiles.model()
-            # if not modelFiles:
             modelFiles = FSM4Files(parent=self.main_ui)
             modelFiles.setIconProvider(IconProvider())
-            # modelFiles.setIconProvider(CustomIconProvider())
             self.main_ui.iconFiles.setModel(modelFiles)
             modelFiles.setRootPath(CUR_DIR_SELECTED)
 
@@ -577,21 +559,6 @@ class filesWidget():
         dirPath = model.filePath(index)
         self.openDir(dirPath)
 
-    # def copyPath(self, self.main_ui):
-    #     path = self.main_ui.currentFolderBox.text().strip()
-    #     # self.main_ui.outputFolder.clear()
-    #     # self.main_ui.outputFolder.setText(path)
-    #     pyperclip.copy(path)
-    #
-    #
-    # def pastePath(self, self.main_ui):
-    #     path = pyperclip.paste()
-    #     if path != None:
-    #         debug.info(path)
-    #         self.main_ui.currentFolderBox.clear()
-    #         self.main_ui.currentFolderBox.setText(path.strip())
-    #     else:
-    #         pass
 
     def clearAllSelection(self):
         self.main_ui.iconFiles.clearSelection()
@@ -629,8 +596,6 @@ class filesWidget():
         ROOTDIR = self.main_ui.currentFolderBox.text().strip().encode('utf-8')
         if ROOTDIR != "":
             ROOTDIRNEW = os.path.abspath(os.path.expanduser(ROOTDIR))
-            # home = os.path.expanduser(ROOTDIR)
-            # debug.info(home)
             if os.path.exists(ROOTDIRNEW):
                 debug.info (ROOTDIRNEW)
                 self.openDir(ROOTDIRNEW)
@@ -662,9 +627,7 @@ class filesWidget():
 
         for selectedIndex in selectedIndexes:
             try:
-                # filePath = os.path.abspath(str(model.filePath(selectedIndex)))
                 filePath = os.path.abspath(str(model.filePath(selectedIndex).encode('utf-8')))
-                # debug.info(filePath)
                 files.append(filePath)
             except:
                 debug.info(str(sys.exc_info()))
@@ -695,7 +658,6 @@ class filesWidget():
                 if fileInfo.isFile():
                     debug.info("This is a file!")
                     try:
-                        # suffix = fileName.split(".")[-1]
                         suffix = pathlib.Path(fileName).suffix.split('.')[-1]
                         debug.info(suffix)
                         openCmd = ""
@@ -719,23 +681,9 @@ class filesWidget():
                 debug.info(str(sys.exc_info()))
 
 
-    # def popupTabs(self.main_ui,pos):
-    #     debug.info("Tab Popup")
-    #     menu = QtWidgets.QMenu()
-    #     newTabAction = menu.addAction("New Tab")
-    #     action = menu.exec_(self.main_ui.tabWidget.mapToGlobal(pos))
-    #
-    #     if(action==newTabAction):
-    #         debug.info("New Tab")
-    #         tab1 = QtWidgets.QWidget()
-    #         tab1.setLayout(self.main_ui.verticalLayout)
-    #         self.main_ui.tabWidget.addTab(tab1, "new")
-
-
     def popUpFiles(self,context,pos):
         clip = QtWidgets.QApplication.clipboard()
         pasteUrls = clip.mimeData().urls()
-        # debug.info(pasteUrls)
 
         menu = QtWidgets.QMenu()
         self.setStyle(menu)
@@ -752,10 +700,8 @@ class filesWidget():
         detailsAction = menu.addAction("Details")
 
         model,selectedIndexes,selectedFiles = self.getSelectedFiles()
-        # debug.info(selectedFiles)
         action = menu.exec_(context.mapToGlobal(pos))
-        # path = os.path.abspath(self.main_ui.currentFolderBox.text().strip())
-        # debug.info(path)
+
 
         if (action == copyAction):
             if (selectedFiles):
@@ -791,7 +737,6 @@ class filesWidget():
             if x in currDir:
                 permitted = True
         if permitted:
-        # sourcePath = os.path.abspath(self.main_ui.currentFolderBox.text().strip())
             model,selectedIndexes,selectedFiles = self.getSelectedFiles()
             urlList = []
             mimeData = QtCore.QMimeData()
@@ -1147,8 +1092,34 @@ class filesWidget():
 
 
     def setStyle(self,ui):
-        sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
+        light = os.path.join(projDir, "styleSheets", "light.qss")
+        dark = os.path.join(projDir, "styleSheets", "dark.qss")
+        theme = os.environ['HR_THEME']
+        if theme == "light":
+            theme = light
+            # os.environ['HR_THEME'] = "light"
+        else:
+            theme = dark
+            # os.environ['HR_THEME'] = "dark"
+        sS = open(theme, "r")
         ui.setStyleSheet(sS.read())
+        sS.close()
+
+
+    def changeTheme(self):
+        light = os.path.join(projDir, "styleSheets", "light.qss")
+        dark = os.path.join(projDir, "styleSheets", "dark.qss")
+
+        theme = os.environ['HR_THEME']
+        if theme == "light":
+            theme = dark
+            os.environ['HR_THEME'] = "dark"
+        else:
+            theme = light
+            os.environ['HR_THEME'] = "light"
+
+        sS = open(theme, "r")
+        self.main_ui.setStyleSheet(sS.read())
         sS.close()
 
 
