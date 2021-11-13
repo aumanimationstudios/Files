@@ -56,7 +56,7 @@ if os.path.exists(filesThumbsDir):
 else:
     os.mkdir(filesThumbsDir)
 
-main_ui_file = os.path.join(projDir, "files_2.ui")
+main_ui_file = os.path.join(projDir, "files_3.ui")
 debug.info(main_ui_file)
 
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
@@ -263,9 +263,14 @@ class filesWidget():
         self.main_ui.progressBar.hide()
         self.messages("white", "")
 
-        self.main_ui.v_splitter.setSizes([100, 2000])
-        self.main_ui.h_splitter.setSizes([250, 1000])
+        self.main_ui.v_splitter1.setSizes([100, 140])
+        self.main_ui.v_splitter2.setSizes([100, 2000])
+        self.main_ui.h_splitter.setSizes([400, 1000])
         self.main_ui.listFiles.setColumnWidth(0, 400)
+
+        # self.main_ui.frame_1.setContentsMargins(0,0,0,0)
+        # self.main_ui.frame_2.setContentsMargins(0,0,0,0)
+        # self.main_ui.infoFrame.setContentsMargins(0,0,0,0)
 
         self.main_ui.iconFiles.hide()
 
@@ -867,6 +872,10 @@ class filesWidget():
 
 
     def createNewFolder(self):
+        self.clearInfoFrame()
+        self.main_ui.v_splitter1.setSizes([100, 140])
+        layOut = self.main_ui.infoFrame.layout()
+
         currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
         debug.info(currDir)
 
@@ -875,14 +884,78 @@ class filesWidget():
             if x in currDir:
                 permitted = True
         if permitted:
-            newFolder = currDir+os.sep+"New_Folder"
-            newFolderCmd = "mkdir \"{0}\" ".format(newFolder)
-            debug.info(newFolderCmd)
-            subprocess.Popen(shlex.split(newFolderCmd))
+            label = QtWidgets.QLabel()
+            nameLine = QtWidgets.QLineEdit()
+            createButton = QtWidgets.QPushButton()
+            cancelButton = QtWidgets.QPushButton()
+            vSpacer = QtWidgets.QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+            layOut.addWidget(label, 1, 0, 1, 2)
+            layOut.addWidget(nameLine, 2, 0, 1, 2)
+            layOut.addWidget(cancelButton, 3, 0)
+            layOut.addWidget(createButton, 3, 1)
+            layOut.addItem(vSpacer)
+            self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.ClickFocus)
+            self.main_ui.searchBox.setFocus()
+            nameLine.setFocusPolicy(QtCore.Qt.StrongFocus)
+            nameLine.setFocus()
+            label.setStyleSheet(''' font-size: 20px; ''')
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            label.setText("<b>Create New Folder</b>")
+            nameLine.setText("New_Folder")
+            cancelButton.setText("Cancel")
+            createButton.setText("Create")
+            self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
+            createButton.setShortcut(QtGui.QKeySequence("Return"))
+            cancelButton.setShortcut(QtGui.QKeySequence("Escape"))
+            createButton.clicked.connect(lambda x, line=nameLine: self.addFolder(line))
+            cancelButton.clicked.connect(self.clearInfoFrame)
         else:
             debug.info("Danger Zone: Can not create new folder")
             debug.info("Error! No permission to create new folder.")
             self.messages("red", "Error! No permission to create new folder.")
+            self.clearInfoFrame()
+            return
+
+
+    def addFolder(self, line):
+        debug.info(line.text())
+
+        currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
+        debug.info(currDir)
+
+        newFolderName = str(line.text()).strip()
+        dirs = [x for x in os.listdir(currDir) if not x.startswith(".") and os.path.isdir(os.path.join(currDir, x))]
+        debug.info(dirs)
+        for i in range(1,100):
+            if newFolderName in dirs:
+                newFolderName += "_"+str(i)
+            else:
+                break
+
+        newFolder = currDir + os.sep + newFolderName
+        newFolderCmd = "mkdir \"{0}\" ".format(newFolder)
+        debug.info(newFolderCmd)
+        try:
+            subprocess.Popen(shlex.split(newFolderCmd))
+        except:
+            debug.info(str(sys.exc_info()))
+        self.clearInfoFrame()
+
+
+    def clearInfoFrame(self):
+        self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
+        self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.main_ui.searchBox.setFocus()
+        # self.main_ui.v_splitter1.setSizes([100, 140])
+        layOut = self.main_ui.infoFrame.layout()
+        if layOut:
+            try:
+                for i in reversed(range(layOut.count())):
+                    widget = layOut.takeAt(i).widget()
+                    if widget is not None:
+                        widget.setParent(None)
+            except:
+                debug.info(str(sys.exc_info()))
 
 
     def addToFavourites(self):
@@ -907,6 +980,10 @@ class filesWidget():
 
 
     def renameUi(self):
+        self.clearInfoFrame()
+        self.main_ui.v_splitter1.setSizes([100, 140])
+        layOut = self.main_ui.infoFrame.layout()
+
         currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
         model, selectedIndexes, selectedFiles = self.getSelectedFiles()
 
@@ -925,15 +1002,53 @@ class filesWidget():
                 except:
                     debug.info(str(sys.exc_info()))
             debug.info(fileDets)
-
-            if (len(fileDets)) == 1:
-                for key, value in fileDets.items():
-                    cmd = sys.executable+" "+rename+" --name \"{0}\" --path \"{1}\" ".format(key,currDir)
-                    debug.info(cmd)
-                    subprocess.Popen(shlex.split(cmd))
         else:
             debug.info("Error! No permission to rename.")
-            self.messages("red","Error! No permission to rename.")
+            self.messages("red", "Error! No permission to rename.")
+            self.clearInfoFrame()
+            return
+        debug.info(fileDets)
+        if (len(fileDets)) == 1:
+            for key, value in fileDets.items():
+                label = QtWidgets.QLabel()
+                nameLine = QtWidgets.QLineEdit()
+                renameButton = QtWidgets.QPushButton()
+                cancelButton = QtWidgets.QPushButton()
+                vSpacer = QtWidgets.QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+                layOut.addWidget(label, 1, 0, 1, 2)
+                layOut.addWidget(nameLine, 2, 0, 1, 2)
+                layOut.addWidget(cancelButton, 3, 0)
+                layOut.addWidget(renameButton, 3, 1)
+                layOut.addItem(vSpacer)
+                self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.ClickFocus)
+                self.main_ui.searchBox.setFocus()
+                nameLine.setFocusPolicy(QtCore.Qt.StrongFocus)
+                nameLine.setFocus()
+                label.setStyleSheet(''' font-size: 20px; ''')
+                label.setAlignment(QtCore.Qt.AlignCenter)
+                label.setText("<b>Rename</b>")
+                nameLine.setText(key)
+                nameLine.setCursorPosition(0)
+                cancelButton.setText("Cancel")
+                renameButton.setText("Rename")
+                self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
+                renameButton.setShortcut(QtGui.QKeySequence("Return"))
+                cancelButton.setShortcut(QtGui.QKeySequence("Escape"))
+                renameButton.clicked.connect(lambda x, line=nameLine, path=currDir, name=key: self.renameNew(line, path, name))
+                cancelButton.clicked.connect(self.clearInfoFrame)
+
+
+    def renameNew(self, line, path, name):
+        newName = str(line.text()).strip()
+        if os.path.exists(path+os.sep+newName):
+            debug.info("Error! File Exists.")
+            self.messages("red", "Error! File Exists.")
+            self.clearInfoFrame()
+            return
+        cmd = "mv \"{0}\" \"{1}\" ".format(path + os.sep + name, path + os.sep + newName)
+        debug.info(cmd)
+        subprocess.Popen(shlex.split(cmd))
+        self.clearInfoFrame()
 
 
     def deleteFiles(self):
@@ -979,18 +1094,51 @@ class filesWidget():
 
 
     def showDetails(self):
+        self.clearInfoFrame()
+        self.main_ui.v_splitter1.setSizes([100, 140])
+        layOut = self.main_ui.infoFrame.layout()
+
+        label = QtWidgets.QLabel()
+        detsField = QtWidgets.QTextEdit()
+        detsField.setReadOnly(True)
+        layOut.addWidget(label, 1, 0, 1, 2)
+        layOut.addWidget(detsField, 2, 0, 1, 2)
+
+        label.setStyleSheet(''' font-size: 20px; ''')
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        label.setText("<b>Properties</b>")
+
         currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
         debug.info(currDir)
         model, selectedIndexes, selectedFiles = self.getSelectedFiles()
         debug.info(selectedFiles)
 
-        # detsCmd = ['du', '-ch', '--max-depth=1'] + selectedFiles
-        detsCmd = ['du', '-sch'] + selectedFiles
+        fileNames = []
+        indexes = [i for i in selectedIndexes if i.column() == 0]
+        for index in indexes:
+            fileName = (str(model.fileName(index).encode('utf-8')))
+            fileNames.append(fileName)
+
+        # detsField.append("\n")
+        detsField.append("<b>Name : </b>"+", ".join(fileNames))
+        detsField.append("<b>Location : </b>" + currDir)
+
+        allSelectedFiles = [file+"/*" for file in selectedFiles]
+
+        detsCmd = ['du', '-sch']
+        for file in allSelectedFiles:
+            detsCmd = detsCmd + glob.glob(file)
         debug.info(detsCmd)
 
-        cmd = sys.executable + " " + details + " --command \"{0}\" ".format(detsCmd)
-        debug.info(cmd)
-        subprocess.Popen(shlex.split(cmd))
+        detsField.append("<b>Items : </b>" + str(len(selectedFiles)+len(detsCmd)-2))
+
+        sT = getSizeThread(detsCmd, app)
+        sT.result.connect(lambda x, textEdit=detsField: self.setSize(textEdit,x))
+        sT.start()
+
+
+    def setSize(self,textEdit,size):
+        textEdit.append("<b>Size : </b>"+size+"B")
 
 
     def messages(self,color,msg):
@@ -1002,6 +1150,30 @@ class filesWidget():
         sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
         ui.setStyleSheet(sS.read())
         sS.close()
+
+
+
+class getSizeThread(QThread):
+    finished = pyqtSignal()
+    result = pyqtSignal(str)
+
+    def __init__(self,cmd,parent):
+        super(getSizeThread, self).__init__(parent)
+        self.cmd = cmd
+
+    def run(self):
+        try:
+            p = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1,
+                                 universal_newlines=True)
+            out, err = p.communicate()
+            size = out.split("\t")[-2].split("\n")[1]
+        except:
+            debug.info(str(sys.exc_info()))
+        else:
+            self.result.emit(size)
+        finally:
+            self.finished.emit()
+
 
 
 if __name__ == '__main__':
