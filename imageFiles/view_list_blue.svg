@@ -26,16 +26,16 @@
      width="24mm"
      showborder="true"
      units="px"
-     inkscape:zoom="11.313709"
-     inkscape:cx="19.578019"
-     inkscape:cy="18.73833"
+     inkscape:zoom="22.627418"
+     inkscape:cx="13.72229"
+     inkscape:cy="14.053747"
      inkscape:window-width="1920"
      inkscape:window-height="1019"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="g11961"
-     inkscape:snap-global="false"
+     inkscape:snap-global="true"
      inkscape:snap-bbox="false" />
   <defs
      id="defs25" />
@@ -58,54 +58,68 @@
       <g
          id="g11961"
          style="fill:#4a90e2;fill-opacity:1">
-        <rect
-           style="fill:#4a90e2;fill-opacity:1;stroke-width:0.325001;stroke-miterlimit:4;stroke-dasharray:none"
-           id="rect11308"
-           width="1.3047428"
-           height="1.3047428"
-           x="0.1337247"
-           y="-1.0591555"
-           ry="0.17739092" />
-        <rect
-           style="fill:#4a90e2;fill-opacity:1;stroke-width:0.349227;stroke-miterlimit:4;stroke-dasharray:none"
-           id="rect11308-0"
-           width="4.075603"
-           height="1.3047428"
-           x="1.8886745"
-           y="-1.0591555"
-           ry="0.17739092" />
-        <rect
-           style="fill:#4a90e2;fill-opacity:1;stroke-width:0.325001;stroke-miterlimit:4;stroke-dasharray:none"
-           id="rect11308-2"
-           width="1.3047428"
-           height="1.3047428"
-           x="0.1337247"
-           y="1.203409"
-           ry="0.17739092" />
-        <rect
-           style="fill:#4a90e2;fill-opacity:1;stroke-width:0.349227;stroke-miterlimit:4;stroke-dasharray:none"
-           id="rect11308-0-61"
-           width="4.0789647"
-           height="1.3047428"
-           x="1.8886745"
-           y="1.203409"
-           ry="0.17739092" />
-        <rect
-           style="fill:#4a90e2;fill-opacity:1;stroke-width:0.325001;stroke-miterlimit:4;stroke-dasharray:none"
-           id="rect11308-2-7"
-           width="1.3047428"
-           height="1.3047428"
-           x="0.1337247"
-           y="3.458117"
-           ry="0.17739092" />
-        <rect
-           style="fill:#4a90e2;fill-opacity:1;stroke-width:0.349227;stroke-miterlimit:4;stroke-dasharray:none"
-           id="rect11308-0-61-9"
-           width="4.1332393"
-           height="1.3047428"
-           x="1.8886745"
-           y="3.458117"
-           ry="0.17739092" />
+        <g
+           id="g29136"
+           transform="translate(-0.01577747,0.49815182)">
+          <rect
+             style="fill:#4a90e2;fill-opacity:1;stroke-width:0.325001;stroke-miterlimit:4;stroke-dasharray:none"
+             id="rect11308"
+             width="1.2902582"
+             height="0.87166709"
+             x="0.14951824"
+             y="-1.0609243"
+             ry="0.17739092" />
+          <rect
+             style="fill:#4a90e2;fill-opacity:1;stroke-width:0.349227;stroke-miterlimit:4;stroke-dasharray:none"
+             id="rect11308-0"
+             width="4.0897722"
+             height="0.86678785"
+             x="1.9133817"
+             y="-1.064827"
+             ry="0.17739092" />
+        </g>
+        <g
+           id="g29136-6"
+           transform="translate(-0.01577747,2.4884031)"
+           style="fill:#4a90e2;fill-opacity:1">
+          <rect
+             style="fill:#4a90e2;fill-opacity:1;stroke-width:0.325001;stroke-miterlimit:4;stroke-dasharray:none"
+             id="rect11308-3"
+             width="1.2902582"
+             height="0.87166709"
+             x="0.14951824"
+             y="-1.0609243"
+             ry="0.17739092" />
+          <rect
+             style="fill:#4a90e2;fill-opacity:1;stroke-width:0.349227;stroke-miterlimit:4;stroke-dasharray:none"
+             id="rect11308-0-2"
+             width="4.0897722"
+             height="0.86678785"
+             x="1.9133817"
+             y="-1.064827"
+             ry="0.17739092" />
+        </g>
+        <g
+           id="g29136-6-0"
+           transform="translate(-0.01577747,4.4369078)"
+           style="fill:#4a90e2;fill-opacity:1">
+          <rect
+             style="fill:#4a90e2;fill-opacity:1;stroke-width:0.325001;stroke-miterlimit:4;stroke-dasharray:none"
+             id="rect11308-3-6"
+             width="1.2902582"
+             height="0.87166709"
+             x="0.14951824"
+             y="-1.0609243"
+             ry="0.17739092" />
+          <rect
+             style="fill:#4a90e2;fill-opacity:1;stroke-width:0.349227;stroke-miterlimit:4;stroke-dasharray:none"
+             id="rect11308-0-2-1"
+             width="4.0897722"
+             height="0.86678785"
+             x="1.9133817"
+             y="-1.064827"
+             ry="0.17739092" />
+        </g>
       </g>
     </g>
     <path

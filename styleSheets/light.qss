@@ -31,7 +31,7 @@ QCheckBox {
     spacing: 5px;
     outline: none;
     color: #100f0e;
-    margin-bottom: 2px;
+    margin-bottom: 0px;
 }
 
 QCheckBox:disabled {
@@ -41,8 +41,8 @@ QCheckBox:disabled {
 
 QCheckBox::indicator,
 QGroupBox::indicator {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
 }
 
 QGroupBox::indicator {
@@ -73,8 +73,8 @@ QGroupBox::indicator:checked {
 }
 
 QCheckBox::indicator:checked {
-    background-color:       green;
-    border:                 2px solid white;
+    background-color:       #cec9c4;
+    border:                 1px solid #898683;
 }
 
 QCheckBox::indicator:checked:hover,
