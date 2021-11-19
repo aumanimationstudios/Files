@@ -1225,6 +1225,8 @@ class downloadVideoThread(QThread):
                     msg = "Unsupported URL"
                 elif "looks truncated" in line:
                     msg = "Url looks truncated"
+                elif "Unable to extract video data" in line:
+                    msg = "Unable to extract video data"
                 elif "%" in line:
                     synData = (tuple(filter(None, line.strip().split('('))))
                     if synData:
