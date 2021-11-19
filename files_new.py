@@ -25,6 +25,7 @@ import sys
 import re
 import pexpect
 import setproctitle
+import signal
 import subprocess
 import shlex
 from collections import OrderedDict
@@ -56,11 +57,11 @@ if os.path.exists(filesThumbsDir):
 else:
     os.mkdir(filesThumbsDir)
 
-main_ui_file = os.path.join(projDir, "files_3.ui")
+main_ui_file = os.path.join(projDir, "files_4.ui")
 debug.info(main_ui_file)
 
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
-videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV']
+videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV','webm']
 audioFormats = ['mp3','aac']
 textFormats = ['txt','py','sh','text','json','conf','yml','log']
 supportedFormats = ['mp4','mp3']
@@ -101,6 +102,7 @@ iconsIcon = None
 
 cutFile = False
 
+currDownloads = []
 
 
 class WorkerSignals(QtCore.QObject):
@@ -258,15 +260,23 @@ class filesWidget():
         self.main_ui.changeDirButt.clicked.connect(lambda x: self.changeDir())
         self.main_ui.searchButt.clicked.connect(lambda x: self.search())
 
+        self.main_ui.audioRestartButt.clicked.connect(lambda x: self.audioRestart())
+        self.main_ui.downloadButt.clicked.connect(lambda x: self.downloadVideo())
+        self.main_ui.cancelButt.clicked.connect(lambda x: self.cancelVideoDownload())
+
         self.main_ui.iconFiles.customContextMenuRequested.connect(lambda x, context=self.main_ui.iconFiles.viewport(): self.popUpFiles(context, x))
         self.main_ui.iconFiles.doubleClicked.connect(lambda x : self.openFile())
         self.main_ui.listFiles.customContextMenuRequested.connect(lambda x, context=self.main_ui.listFiles.viewport() : self.popUpFiles(context, x))
         self.main_ui.listFiles.doubleClicked.connect(lambda x : self.openFile())
 
         self.main_ui.progressBar.hide()
+        self.main_ui.downloadProgressBar.hide()
+        self.main_ui.cancelButt.setEnabled(False)
+        self.main_ui.cancelButt.hide()
         self.messages("white", "")
 
         self.main_ui.v_splitter1.setSizes([100, 140])
+        # self.main_ui.v_splitter1.setStretchFactor(2, 10)
         self.main_ui.v_splitter2.setSizes([100, 2000])
         self.main_ui.h_splitter.setSizes([400, 1000])
         self.main_ui.listFiles.setColumnWidth(0, 400)
@@ -424,6 +434,8 @@ class filesWidget():
         self.clearAllSelection()
         self.openListDir(dirPath)
         self.openIconDir(dirPath)
+
+        self.main_ui.pathBox.setText(dirPath)
 
         worker = Worker(self.genThumb,dirPath)
         self.threadpool.start(worker)
@@ -1068,11 +1080,11 @@ class filesWidget():
         detsField.append("<b>Name : </b>"+", ".join(fileNames))
         detsField.append("<b>Location : </b>" + currDir)
 
-        allSelectedFiles = [file+"/*" for file in selectedFiles]
+        # allSelectedFiles = [file+"/*" for file in selectedFiles]
 
         detsCmd = ['du', '-sch']
-        for file in allSelectedFiles:
-            detsCmd = detsCmd + glob.glob(file)
+        for file in selectedFiles:
+            detsCmd = detsCmd + [file]
         debug.info(detsCmd)
 
         detsField.append("<b>Items : </b>" + str(len(selectedFiles)+len(detsCmd)-2))
@@ -1122,6 +1134,109 @@ class filesWidget():
         self.main_ui.setStyleSheet(sS.read())
         sS.close()
 
+
+    def audioRestart(self):
+        arCmd = "audio-restart"
+        debug.info(arCmd)
+        subprocess.Popen(arCmd)
+
+
+    def updateDownloadProgress(self, prctg):
+        self.main_ui.downloadProgressBar.setValue(int(prctg))
+
+
+    def afterVideoDownload(self, msg):
+        self.main_ui.downloadProgressBar.hide()
+        self.main_ui.urlBox.setReadOnly(False)
+        self.main_ui.pathBox.setReadOnly(False)
+        self.main_ui.cancelButt.setEnabled(False)
+        self.main_ui.downloadButt.setEnabled(True)
+        self.main_ui.downloadButt.show()
+        self.main_ui.cancelButt.hide()
+        self.messages("green", msg)
+
+
+    def downloadVideo(self):
+        link = str(self.main_ui.urlBox.text().strip()).encode('utf-8')
+        downDir = str(os.path.abspath(os.path.expanduser(self.main_ui.pathBox.text().strip())).encode('utf-8'))
+        path = str(os.path.abspath(os.path.expanduser(self.main_ui.pathBox.text().strip())).encode('utf-8'))+os.sep+"%(title)s.%(ext)s"
+        if os.path.exists(downDir):
+            permitted = False
+            for x in pastePermittedDirs:
+                if x in downDir:
+                    permitted = True
+            if permitted:
+                self.main_ui.downloadProgressBar.show()
+                self.main_ui.urlBox.setReadOnly(True)
+                self.main_ui.pathBox.setReadOnly(True)
+                self.main_ui.cancelButt.setEnabled(True)
+                self.main_ui.downloadButt.setEnabled(False)
+                self.main_ui.downloadButt.hide()
+                self.main_ui.cancelButt.show()
+
+                dT = downloadVideoThread(path,link, app)
+                dT.result.connect(lambda x : self.afterVideoDownload(x))
+                dT.progress.connect(lambda x : self.updateDownloadProgress(x))
+                dT.start()
+            else:
+                debug.info("No permission to write")
+                self.messages("red", "Not permitted!")
+        else:
+            debug.info("No such directory")
+            self.messages("red", "Folder does not exists!")
+
+
+    def cancelVideoDownload(self):
+        for proc in currDownloads:
+            debug.info(proc.pid)
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+
+
+
+class downloadVideoThread(QThread):
+    progress = pyqtSignal(int)
+    result = pyqtSignal(str)
+    finished = pyqtSignal()
+
+    def __init__(self, path, link, parent):
+        super(downloadVideoThread, self).__init__(parent)
+        self.path = path
+        self.link = link
+
+    def run(self):
+        downCmd = "youtube-dl --external-downloader aria2c --external-downloader-args " \
+                  "'--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
+                  "-o \"{0}\" \"{1}\" ".format(self.path,self.link)
+        debug.info(downCmd)
+        try:
+            p = subprocess.Popen(shlex.split(downCmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 bufsize=1,universal_newlines=True, preexec_fn=os.setsid)
+            currDownloads.append(p)
+            msg = ""
+            for line in iter(p.stdout.readline, b''):
+                debug.info(line)
+                if "Unable to download webpage" in line:
+                    msg = "Unable to download video"
+                elif "already been downloaded and merged" in line:
+                    msg = "Already been downloaded and merged"
+                elif "100%" in line:
+                    msg = "Video Downloaded"
+                elif "Unsupported URL" in line:
+                    msg = "Unsupported URL"
+                elif "looks truncated" in line:
+                    msg = "Url looks truncated"
+                elif "%" in line:
+                    synData = (tuple(filter(None, line.strip().split('('))))
+                    if synData:
+                        prctg = synData[1].split("%")[0].strip()
+                        self.progress.emit(int(prctg))
+        except:
+            debug.info(str(sys.exc_info()))
+        else:
+            self.result.emit(msg)
+        finally:
+            self.finished.emit()
+            return
 
 
 class getSizeThread(QThread):

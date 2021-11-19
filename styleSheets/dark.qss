@@ -529,10 +529,10 @@ QPushButton:disabled {
     border-width: 1px;
     border-color: #454545;
     border-style: solid;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+    padding-left: 0px;
+    padding-right: 0px;
     border-radius: 2px;
     color: #454545;
 }
@@ -661,17 +661,26 @@ QLabel {
 }
 
 QTabWidget {
-    border: 0px transparent black;
+  padding: 2px;
+  selection-background-color: #455364;
+}
+
+QTabWidget QWidget {
+  /* Fixes #189 */
+  border-radius: 4px;
 }
 
 QTabWidget::pane {
-    border: 1px solid #76797C;
-    padding: -10px;
-    margin: 0px;
+  border: 1px solid #455364;
+  border-radius: 4px;
+  margin: 0px;
+  /* Fixes double border inside pane with pyqt5 */
+  padding: 0px;
 }
 
-QTabWidget::tab-bar {
-    /* left: 5px; move to the right by 5px */
+QTabWidget::pane:selected {
+  background-color: #455364;
+  border: 1px solid #346792;
 }
 
 QTabBar {
