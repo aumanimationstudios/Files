@@ -64,7 +64,7 @@ imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
 videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV','webm']
 audioFormats = ['mp3','aac']
 textFormats = ['txt','py','sh','text','json','conf','yml','log']
-supportedFormats = ['mp4','mp3']
+# supportedFormats = ['mp4','mp3']
 
 renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
 cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
@@ -137,8 +137,8 @@ class Worker(QtCore.QRunnable):
 
 class IconProvider(QtWidgets.QFileIconProvider):
     def icon(self, fileInfo):
-        # if fileInfo.isDir():
-        #     return QtGui.QIcon(os.path.join(projDir, "imageFiles", "folder_icon.svg"))
+        if fileInfo.isDir():
+            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-blue.svg"))
         if fileInfo.isFile():
             if fileInfo.suffix() in videoFormats:
                 # filePath = fileInfo.filePath()
@@ -150,10 +150,10 @@ class IconProvider(QtWidgets.QFileIconProvider):
                     if fileName.startswith("."):
                         pass
                     else:
-                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_video_icon.svg"))
+                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
 
             if fileInfo.suffix() in audioFormats:
-                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_audio_icon.svg"))
+                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
 
             if fileInfo.suffix() in imageFormats:
                 # filePath = fileInfo.filePath()
@@ -165,11 +165,11 @@ class IconProvider(QtWidgets.QFileIconProvider):
                     if fileName.startswith("."):
                         pass
                     else:
-                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_image_icon.svg"))
+                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
 
             if fileInfo.suffix() in textFormats:
-                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_files_icon.svg"))
-            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "file_icon.svg"))
+                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
+            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "empty-blue.svg"))
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
 
 
@@ -205,6 +205,7 @@ class filesWidget():
 
         self.main_ui = uic.loadUi(main_ui_file)
         self.main_ui.setWindowTitle("FILES")
+        self.main_ui.setWindowIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "folder.svg")))
 
         sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
         self.main_ui.setStyleSheet(sS.read())
@@ -261,6 +262,7 @@ class filesWidget():
         self.main_ui.searchButt.clicked.connect(lambda x: self.search())
 
         self.main_ui.audioRestartButt.clicked.connect(lambda x: self.audioRestart())
+        self.main_ui.blenderMediaViewerButt.clicked.connect(lambda x: self.blenderMediaViewer())
         self.main_ui.downloadButt.clicked.connect(lambda x: self.downloadVideo())
         self.main_ui.cancelButt.clicked.connect(lambda x: self.cancelVideoDownload())
 
@@ -275,11 +277,14 @@ class filesWidget():
         self.main_ui.cancelButt.hide()
         self.messages("white", "")
 
-        self.main_ui.v_splitter1.setSizes([100, 140])
-        # self.main_ui.v_splitter1.setStretchFactor(2, 10)
+        # self.main_ui.v_splitter1.setStretchFactor(5, 5)
+        self.main_ui.v_splitter1.setSizes([100,100])
         self.main_ui.v_splitter2.setSizes([100, 2000])
         self.main_ui.h_splitter.setSizes([400, 1000])
         self.main_ui.listFiles.setColumnWidth(0, 400)
+
+        self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.main_ui.searchBox.setFocus()
 
         self.main_ui.iconFiles.hide()
 
@@ -1139,6 +1144,12 @@ class filesWidget():
         arCmd = "audio-restart"
         debug.info(arCmd)
         subprocess.Popen(arCmd)
+
+
+    def blenderMediaViewer(self):
+        bmvcmd = "/proj/standard/share/blender-3.0/blender --app-template blender_media_viewer -w"
+        debug.info(bmvcmd)
+        subprocess.Popen(shlex.split(bmvcmd))
 
 
     def updateDownloadProgress(self, prctg):
