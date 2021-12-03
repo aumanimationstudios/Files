@@ -1,39 +1,47 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
 <svg
    width="16"
    height="16"
+   viewBox="0 0 4.2333332 4.2333332"
    version="1.1"
-   id="svg933"
-   sodipodi:docname="image-blue.svg"
+   id="svg824"
    inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   sodipodi:docname="image.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <defs
-     id="defs937" />
   <sodipodi:namedview
-     id="namedview935"
+     id="namedview826"
      pagecolor="#ffffff"
      bordercolor="#999999"
      borderopacity="1"
      inkscape:pageshadow="0"
      inkscape:pageopacity="0"
      inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="54.4375"
-     inkscape:cx="8"
-     inkscape:cy="9.4695752"
+     units="px"
+     inkscape:zoom="49.659708"
+     inkscape:cx="6.5948837"
+     inkscape:cy="7.2191323"
      inkscape:window-width="1920"
      inkscape:window-height="1052"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg933" />
-  <path
-     color="#000"
-     d="M2.064 2v12h12V2h-11zm1 1h1.912a1.5 1.5 0 0 1-1.912 1.912zm2.947 0h7.05v10h-10v-.783l1.326-1.299 1.408-1.404.564.418L7.461 11l2.6-2.398 4 3.891-1-2.492-3-3-2.6 2.6-1.6-1.6-2.801 2.801V5.948a2.5 2.5 0 0 0 2.947-2.947"
-     fill="#8542c2"
-     id="path931"
-     style="fill:#209ae7;fill-opacity:1" />
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs821" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       id="rect3860"
+       style="fill:#219ae7;fill-opacity:1;stroke:none;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none"
+       d="M 0.52916669,0.5291667 V 3.7041666 H 3.7041666 V 0.5291667 Z M 0.79375002,0.79375003 H 1.2996623 C 1.4064764,1.0844112 1.1386873,1.4014824 0.79375002,1.2996623 Z m 0.77979738,0 H 3.4385499 V 2.64635 L 2.6447998,1.8526001 1.9569865,2.5404134 1.5337565,2.1171834 0.79375002,2.854606 V 1.5735473 C 1.3365032,1.6614713 1.6530978,1.1967321 1.5735474,0.79375003 Z M 2.6447998,2.27583 3.4385499,3.05201 V 3.4395833 H 0.79375002 V 3.2313274 L 1.5161865,2.517159 l 0.4408,0.3932576 z" />
+  </g>
 </svg>
