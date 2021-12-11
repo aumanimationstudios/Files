@@ -1165,14 +1165,14 @@ QTableCornerButton::section {
 }
 
 QToolBox {
-    padding: 5px;
-    border: 1px transparent black;
+    padding: 0px;
+    border: 1px solid #898683;
 }
 
 QToolBox::tab {
     color: #100f0e;
     background-color: #cec9c4;
-    border: 1px solid #898683;
+    border: 0px solid #898683;
     border-bottom: 1px transparent #cec9c4;
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
@@ -1180,6 +1180,7 @@ QToolBox::tab {
 
 QToolBox::tab:selected {
     /* italicize selected tabs */
+    color: #c25116;
     font: italic;
     background-color: #cec9c4;
     border-color: #c25116;

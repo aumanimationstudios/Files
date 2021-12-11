@@ -57,7 +57,7 @@ if os.path.exists(filesThumbsDir):
 else:
     os.mkdir(filesThumbsDir)
 
-main_ui_file = os.path.join(projDir, "files_4.ui")
+main_ui_file = os.path.join(projDir, "files_5.ui")
 debug.info(main_ui_file)
 
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
@@ -278,7 +278,7 @@ class filesWidget():
         self.messages("white", "")
 
         # self.main_ui.v_splitter1.setStretchFactor(5, 5)
-        self.main_ui.v_splitter1.setSizes([100,100])
+        self.main_ui.v_splitter1.setSizes([100, 140])
         self.main_ui.v_splitter2.setSizes([100, 2000])
         self.main_ui.h_splitter.setSizes([400, 1000])
         self.main_ui.listFiles.setColumnWidth(0, 400)
@@ -1238,6 +1238,10 @@ class downloadVideoThread(QThread):
                     msg = "Url looks truncated"
                 elif "Unable to extract video data" in line:
                     msg = "Unable to extract video data"
+                elif "Download aborted" in line:
+                    msg = "Download aborted"
+                elif "Redirecting to" in line:
+                    msg = "Aborted"
                 elif "%" in line:
                     synData = (tuple(filter(None, line.strip().split('('))))
                     if synData:
