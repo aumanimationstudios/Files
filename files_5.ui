@@ -210,6 +210,9 @@
             <property name="selectionMode">
              <enum>QAbstractItemView::ExtendedSelection</enum>
             </property>
+            <property name="verticalScrollMode">
+             <enum>QAbstractItemView::ScrollPerPixel</enum>
+            </property>
             <property name="rootIsDecorated">
              <bool>false</bool>
             </property>
@@ -283,7 +286,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>237</width>
+               <width>239</width>
                <height>92</height>
               </rect>
              </property>
@@ -327,7 +330,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>237</width>
+               <width>239</width>
                <height>92</height>
               </rect>
              </property>
@@ -371,7 +374,7 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>237</width>
+               <width>239</width>
                <height>220</height>
               </rect>
              </property>
