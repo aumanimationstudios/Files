@@ -62,7 +62,7 @@ debug.info(main_ui_file)
 
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
 videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV','webm']
-audioFormats = ['mp3','aac']
+audioFormats = ['mp3','aac','wav']
 textFormats = ['txt','py','sh','text','json','conf','yml','log']
 # supportedFormats = ['mp4','mp3']
 
@@ -1001,7 +1001,8 @@ class filesWidget():
 
 
     def renameNew(self, line, path, name):
-        newName = str(line.text()).strip()
+        # newName = str(line.text()).strip()
+        newName = line.text().encode('utf-8').strip()
         if os.path.exists(path+os.sep+newName):
             debug.info("Error! File Exists.")
             self.messages("red", "Error! File Exists.")
