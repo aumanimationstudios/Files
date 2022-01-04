@@ -678,8 +678,10 @@ class filesWidget():
                         suffix = pathlib.Path(fileName).suffix.split('.')[-1]
                         debug.info(suffix)
                         openCmd = ""
-                        if suffix in videoFormats+audioFormats:
+                        if suffix in videoFormats:
                             openCmd = "mpv --screenshot-directory=/tmp/ --input-conf={0} \"{1}\" ".format(os.path.join(projDir,"video-input.conf"),filePath)
+                        elif suffix in audioFormats:
+                            openCmd = "qmmp \"{0}\" ".format(filePath)
                         elif (suffix in imageFormats):
                             # openCmd = projDir+os.sep+"mediaPlayer.py --path '{0}' ".format(filePath)
                             openCmd = "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} \"{1}\" "\
