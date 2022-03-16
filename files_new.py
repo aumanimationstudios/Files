@@ -138,38 +138,45 @@ class Worker(QtCore.QRunnable):
 class IconProvider(QtWidgets.QFileIconProvider):
     def icon(self, fileInfo):
         if fileInfo.isDir():
-            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-blue.svg"))
+            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-blue.svg"))
+            return QtGui.QIcon.fromTheme("folder")
         if fileInfo.isFile():
             if fileInfo.suffix() in videoFormats:
                 # filePath = fileInfo.filePath()
-                fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir+fileName+".png"
-                if os.path.exists(thumb_image):
-                    return QtGui.QIcon(thumb_image)
-                else:
-                    if fileName.startswith("."):
-                        pass
-                    else:
-                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
+                # fileName = fileInfo.fileName()
+                # thumb_image = filesThumbsDir+fileName+".png"
+                # if os.path.exists(thumb_image):
+                #     return QtGui.QIcon(thumb_image)
+                # else:
+                #     if fileName.startswith("."):
+                #         pass
+                #     else:
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
+                return QtGui.QIcon.fromTheme("video-x-generic")
 
             if fileInfo.suffix() in audioFormats:
-                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
+                return QtGui.QIcon.fromTheme("audio-x-generic")
 
             if fileInfo.suffix() in imageFormats:
                 # filePath = fileInfo.filePath()
-                fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir + fileName + ".png"
-                if os.path.exists(thumb_image):
-                    return QtGui.QIcon(thumb_image)
-                else:
-                    if fileName.startswith("."):
-                        pass
-                    else:
-                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
+                # fileName = fileInfo.fileName()
+                # thumb_image = filesThumbsDir + fileName + ".png"
+                # if os.path.exists(thumb_image):
+                #     return QtGui.QIcon(thumb_image)
+                # else:
+                #     if fileName.startswith("."):
+                #         pass
+                #     else:
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
+                return QtGui.QIcon.fromTheme("image-x-generic")
 
             if fileInfo.suffix() in textFormats:
-                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
-            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "empty-blue.svg"))
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
+                return QtGui.QIcon.fromTheme("text-x-generic")
+
+            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "empty-blue.svg"))
+            # return QtGui.QIcon.fromTheme("text-x-generic-template")
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
 
 
@@ -442,8 +449,8 @@ class filesWidget():
 
         self.main_ui.pathBox.setText(dirPath)
 
-        worker = Worker(self.genThumb,dirPath)
-        self.threadpool.start(worker)
+        # worker = Worker(self.genThumb,dirPath)
+        # self.threadpool.start(worker)
 
 
     def genThumb(self, dirPath, progress_callback):
