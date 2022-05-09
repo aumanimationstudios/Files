@@ -61,7 +61,7 @@ main_ui_file = os.path.join(projDir, "files_5.ui")
 debug.info(main_ui_file)
 
 imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
-videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV','webm']
+videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV','webm','gif']
 audioFormats = ['mp3','aac','wav']
 textFormats = ['txt','py','sh','text','json','conf','yml','log']
 # supportedFormats = ['mp4','mp3']
