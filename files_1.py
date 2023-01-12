@@ -14,7 +14,7 @@ __email__ = "sanathshetty111@gmail.com"
 #DONE : DETAILS
 #DONE : SEARCH
 #DONE : REPLACE WARNING
-#TODO : TAB OPTION
+#DONE : TAB OPTION
 
 
 import debug
@@ -22,10 +22,13 @@ import constants
 from constants import mimeTypes
 from constants import mimeConvertCmds
 from constants import mimeTypesOpenCmds
+import widgetProvider
 import argparse
 import glob
 import os
 import sys
+import stat
+from datetime import datetime, timedelta
 import re
 import pexpect
 import setproctitle
@@ -42,8 +45,9 @@ import json
 from PIL import Image
 from multiprocessing import Pool
 
-from PyQt5.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem
 from PyQt5 import QtCore, uic, QtGui, QtWidgets
+from PyQt5.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem, QWidget, QShortcut
+from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -57,11 +61,28 @@ homeDir = os.path.expanduser("~")
 
 filesThumbsDir = homeDir+"/.cache/thumbnails/files_thumbs/"
 if os.path.exists(filesThumbsDir):
-    pass
+    # files = os.listdir(filesThumbsDir)
+    files = [f for f in os.listdir(filesThumbsDir) if os.path.isfile(os.path.join(filesThumbsDir, f))]
+    for f in files:
+        file_path = os.path.join(filesThumbsDir, f)
+        # fileStatsObj = os.stat(file_path)
+        # modificationTime = os.path.getmtime(file_path)
+        # debug.info("Last Modified Time : ", modificationTime)
+        # modTimesinceEpoc = os.path.getmtime(file_path)
+        # modificationTime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(modTimesinceEpoc))
+        # debug.info(modTimesinceEpoc)
+        file_mod_time = datetime.fromtimestamp(os.stat(file_path).st_mtime)  # This is a datetime.datetime object!
+        now = datetime.today()
+        max_delay = timedelta(minutes=720)
+        if now - file_mod_time > max_delay:
+            # debug.info("purge now")
+            os.remove(file_path)
+        else:
+            pass
 else:
     os.mkdir(filesThumbsDir)
 
-main_ui_file = os.path.join(projDir, "files.ui")
+main_ui_file = os.path.join(projDir, "files_1.ui")
 debug.info(main_ui_file)
 
 # imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
@@ -89,6 +110,8 @@ places["Home"] = homeDir
 places["Crap"] = "/blueprod/CRAP/crap"
 places["Downloads"] = homeDir+os.sep+"Downloads"
 
+openTabs = {}
+
 rename = os.path.join(projDir, "rename.py")
 details = os.path.join(projDir, "details.py")
 
@@ -101,12 +124,15 @@ else:
     ROOTDIR = rootDir
 
 CUR_DIR_SELECTED = None
-listIcon = None
-iconsIcon = None
+# listIcon = None
+# iconsIcon = None
 
 cutFile = False
 
 currDownloads = []
+
+currIconFiles = None
+currListFiles = None
 
 
 class WorkerSignals(QtCore.QObject):
@@ -148,14 +174,15 @@ class IconProvider(QtWidgets.QFileIconProvider):
             if fileInfo.suffix() in mimeTypes["video"]:
                 filePath = fileInfo.filePath()
                 fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir+fileName+".png"
+                thumb_image = filesThumbsDir+fileName+".jpeg"
                 if os.path.exists(thumb_image):
                     return QtGui.QIcon(thumb_image)
                 else:
                     if fileName.startswith("."):
                         pass
                     else:
-                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
+                        # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
+                        return QtGui.QIcon.fromTheme("video-x-generic")
                 return QtGui.QIcon.fromTheme("video-x-generic")
 
             if fileInfo.suffix() in mimeTypes["audio"]:
@@ -165,14 +192,15 @@ class IconProvider(QtWidgets.QFileIconProvider):
             if fileInfo.suffix() in mimeTypes["image"]:
                 filePath = fileInfo.filePath()
                 fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir + fileName + ".png"
+                thumb_image = filesThumbsDir + fileName + ".jpeg"
                 if os.path.exists(thumb_image):
                     return QtGui.QIcon(thumb_image)
                 else:
                     if fileName.startswith("."):
                         pass
                     else:
-                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
+                        # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
+                        return QtGui.QIcon.fromTheme("image-x-generic")
                 return QtGui.QIcon.fromTheme("image-x-generic")
 
             if fileInfo.suffix() in mimeTypes["text"]:
@@ -180,7 +208,7 @@ class IconProvider(QtWidgets.QFileIconProvider):
                 return QtGui.QIcon.fromTheme("text-x-generic")
 
             # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "empty-blue.svg"))
-            # return QtGui.QIcon.fromTheme("text-x-generic-template")
+            return QtGui.QIcon.fromTheme("application-x-zerosize")
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
 
 
@@ -209,8 +237,10 @@ class DateFormatDelegate(QtWidgets.QStyledItemDelegate):
 
 class filesWidget():
     def __init__(self):
-        global listIcon
-        global iconsIcon
+        # global listIcon
+        # global iconsIcon
+        global currIconFiles
+        global currListFiles
 
         self.threadpool = QtCore.QThreadPool()
 
@@ -223,11 +253,14 @@ class filesWidget():
         sS.close()
         os.environ['HR_THEME'] = "dark"
 
+        # currIconFiles = self.main_ui.iconFiles
+        # currListFiles = self.main_ui.listFiles
+
         self.main_ui.currentFolderBox.clear()
         self.main_ui.currentFolderBox.setText(ROOTDIR)
 
         self.main_ui.treeDirs.sortByColumn(0, QtCore.Qt.AscendingOrder)
-        self.main_ui.listFiles.sortByColumn(0, QtCore.Qt.AscendingOrder)
+        # currListFiles.sortByColumn(0, QtCore.Qt.AscendingOrder)
 
         ROOTDIRNEW = os.path.abspath(self.main_ui.currentFolderBox.text().strip()).encode('utf-8')
         debug.info(ROOTDIRNEW)
@@ -240,21 +273,45 @@ class filesWidget():
         self.loadFavourites()
 
         # listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
-        listIcon = os.path.join(projDir, "imageFiles", "view_list_blue.svg")
-        iconsIcon = os.path.join(projDir, "imageFiles", "view_icons_blue.svg")
-        prevDirIcon = os.path.join(projDir, "imageFiles", "go_up_blue.svg")
-        goIcon = os.path.join(projDir, "imageFiles", "go_down_blue.svg")
-        searchIcon = os.path.join(projDir, "imageFiles", "search_icon.svg")
+        self.listIcon = os.path.join(projDir, "imageFiles", "view_list_blue.svg")
+        self.iconsIcon = os.path.join(projDir, "imageFiles", "view_icons_blue.svg")
+        self.prevDirIcon = os.path.join(projDir, "imageFiles", "go_up_blue.svg")
+        self.goIcon = os.path.join(projDir, "imageFiles", "go_down_blue.svg")
+        self.searchIcon = os.path.join(projDir, "imageFiles", "search_icon.svg")
+        self.closeIcon = os.path.join(projDir, "imageFiles", "new_icons", "close.svg")
+        self.addIcon = os.path.join(projDir, "imageFiles", "new_icons", "add.svg")
+        self.removeIcon = os.path.join(projDir, "imageFiles", "new_icons", "remove.svg")
+        self.helpIcon = os.path.join(projDir, "imageFiles", "help-icon-1.png")
+        self.copyIcon = os.path.join(projDir, "imageFiles", "new_icons", "copy.svg")
+        self.cutIcon = os.path.join(projDir, "imageFiles", "new_icons", "cut.svg")
+        self.pasteIcon = os.path.join(projDir, "imageFiles", "new_icons", "paste.svg")
+        self.newFolderIcon = os.path.join(projDir, "imageFiles", "new_icons", "new_folder.svg")
+        self.addFavouritesIcon = os.path.join(projDir, "imageFiles", "new_icons", "add_favourites.svg")
+        self.renameIcon = os.path.join(projDir, "imageFiles", "new_icons", "rename.svg")
+        self.deleteIcon = os.path.join(projDir, "imageFiles", "new_icons", "delete.svg")
+        self.detailsIcon = os.path.join(projDir, "imageFiles", "new_icons", "details.svg")
 
-        self.main_ui.changeViewButt.setIcon(QtGui.QIcon(iconsIcon))
-        self.main_ui.previousDirButt.setIcon(QtGui.QIcon(prevDirIcon))
-        self.main_ui.changeDirButt.setIcon(QtGui.QIcon(goIcon))
-        self.main_ui.searchButt.setIcon(QtGui.QIcon(searchIcon))
 
-        self.main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(
-            QtGui.QIcon(os.path.join(projDir, "imageFiles", "clear_icon.svg")))
-        self.main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(
-            QtGui.QIcon(os.path.join(projDir, "imageFiles", "clear_icon.svg")))
+        # self.main_ui.tabWidget.tabBarDoubleClicked.connect(self.tab_open_doubleclick)
+        # self.main_ui.tabWidget.customContextMenuRequested.connect(lambda x, context=self.main_ui.tabWidget.currentWidget().viewport(): self.popUpTabs(context, x))
+        self.main_ui.tabWidget.customContextMenuRequested.connect(self.popUpTabs)
+        # self.main_ui.connect(self.main_ui.tabWidget, SIGNAL('customContextMenuRequested(const QPoint &)'), self.popUpTabs)
+        self.main_ui.tabWidget.currentChanged.connect(self.current_tab_changed)
+        self.main_ui.tabWidget.tabCloseRequested.connect(self.close_current_tab)
+
+        self.main_ui.changeViewButt.setIcon(QtGui.QIcon(self.iconsIcon))
+        self.main_ui.previousDirButt.setIcon(QtGui.QIcon(self.prevDirIcon))
+        self.main_ui.changeDirButt.setIcon(QtGui.QIcon(self.goIcon))
+        self.main_ui.searchButt.setIcon(QtGui.QIcon(self.searchIcon))
+
+        self.main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(self.closeIcon))
+        self.main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(self.closeIcon))
+
+        # self.changeViewSc = QShortcut(QKeySequence("Ctrl+V"), self)
+        # self.changeViewSc.activated.connect(self.changeView)
+        QShortcut(QKeySequence("Ctrl+T"),self.main_ui).activated.connect(self.tab_open_doubleclick)
+        # QShortcut(QKeySequence("Ctrl+W"),self.main_ui).activated.connect(lambda currTabIndex = self.main_ui.tabWidget.currentIndex() :self.close_current_tab(currTabIndex))
+        QShortcut(QKeySequence("Ctrl+F"),self.main_ui).activated.connect(self.main_ui.searchBox.setFocus)
 
         self.main_ui.changeViewButt.setShortcut(QtGui.QKeySequence("V"))
         self.main_ui.previousDirButt.setShortcut(QtGui.QKeySequence("Backspace"))
@@ -277,10 +334,13 @@ class filesWidget():
         self.main_ui.downloadButt.clicked.connect(lambda x: self.downloadVideo())
         self.main_ui.cancelButt.clicked.connect(lambda x: self.cancelVideoDownload())
 
-        self.main_ui.iconFiles.customContextMenuRequested.connect(lambda x, context=self.main_ui.iconFiles.viewport(): self.popUpFiles(context, x))
-        self.main_ui.iconFiles.doubleClicked.connect(lambda x : self.openFile())
-        self.main_ui.listFiles.customContextMenuRequested.connect(lambda x, context=self.main_ui.listFiles.viewport() : self.popUpFiles(context, x))
-        self.main_ui.listFiles.doubleClicked.connect(lambda x : self.openFile())
+        try:
+            currIconFiles.customContextMenuRequested.connect(lambda x, context=currIconFiles.viewport(): self.popUpFiles(context, x))
+            currIconFiles.doubleClicked.connect(lambda x : self.openFile())
+            currListFiles.customContextMenuRequested.connect(lambda x, context=currListFiles.viewport() : self.popUpFiles(context, x))
+            currListFiles.doubleClicked.connect(lambda x : self.openFile())
+        except:
+            debug.info(str(sys.exc_info()))
 
         self.main_ui.progressBar.hide()
         self.main_ui.downloadProgressBar.hide()
@@ -292,12 +352,15 @@ class filesWidget():
         self.main_ui.v_splitter1.setSizes([100, 140])
         self.main_ui.v_splitter2.setSizes([100, 2000])
         self.main_ui.h_splitter.setSizes([400, 1000])
-        self.main_ui.listFiles.setColumnWidth(0, 400)
-
+        try:
+            currListFiles.setColumnWidth(0, 400)
+            currIconFiles.hide()
+        except:
+            debug.info(str(sys.exc_info()))
         self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.main_ui.searchBox.setFocus()
 
-        self.main_ui.iconFiles.hide()
+        self.tab_open_doubleclick()
 
         self.main_ui.showMaximized()
         self.main_ui.update()
@@ -319,6 +382,98 @@ class filesWidget():
         else:
             with open(confFile, 'w') as conf_file:
                 json.dump(places, conf_file, sort_keys=True, indent=4)
+
+
+    def popUpTabs(self, pos):
+        menu = QtWidgets.QMenu()
+        self.setStyle(menu)
+        newAction = menu.addAction(QtGui.QIcon(self.addIcon),"New Tab")
+        closeAction = menu.addAction(QtGui.QIcon(self.closeIcon), "Close Tab")
+
+        # action = menu.exec_(context.mapToGlobal(pos))
+        action = menu.exec_(self.main_ui.tabWidget.mapToGlobal(pos))
+
+        if (action == newAction):
+            self.tab_open_doubleclick()
+        if (action == closeAction):
+            currTabIndex = self.main_ui.tabWidget.currentIndex()
+            self.close_current_tab(currTabIndex)
+
+
+    def tab_open_doubleclick(self):
+        global currIconFiles
+        global currListFiles
+
+        debug.info("Tab Opened")
+        content = QFrame()
+
+        layV = QtWidgets.QVBoxLayout()
+        content.setLayout(layV)
+        iconFiles1 = widgetProvider.iconFiles()
+        listFiles1 = widgetProvider.listFiles()
+        layV.addWidget(iconFiles1)
+        layV.addWidget(listFiles1)
+
+        currIconFiles = iconFiles1
+        currListFiles = listFiles1
+
+        currIconFiles.hide()
+        currListFiles.setColumnWidth(0, 400)
+
+        currIconFiles.customContextMenuRequested.connect(lambda x, context=currIconFiles.viewport(): self.popUpFiles(context, x))
+        currIconFiles.doubleClicked.connect(lambda x: self.openFile())
+        currListFiles.customContextMenuRequested.connect(lambda x, context=currListFiles.viewport(): self.popUpFiles(context, x))
+        currListFiles.doubleClicked.connect(lambda x: self.openFile())
+
+        currDirPath = str(os.path.abspath(self.main_ui.currentFolderBox.text().strip()).encode('utf-8'))
+        currDirName = str(os.path.abspath(self.main_ui.currentFolderBox.text().strip()).encode('utf-8')).split(os.sep)[-1]
+
+
+        i = self.main_ui.tabWidget.addTab(content, currDirName)
+        self.main_ui.tabWidget.setCurrentIndex(i)
+
+        self.openDir(currDirPath)
+        # self.main_ui.tabWidget.currentWidget().customContextMenuRequested.connect(self.popUpTabs)
+
+        # self.main_ui.currentFolderBox.clear()
+        # self.main_ui.currentFolderBox.setText(self.main_ui.tabWidget.tabToolTip(i))
+
+
+    def current_tab_changed(self, i):
+        global currIconFiles
+        global currListFiles
+
+        currIconFiles = self.main_ui.tabWidget.currentWidget().findChild(QtWidgets.QListView)
+        currListFiles = self.main_ui.tabWidget.currentWidget().findChild(QtWidgets.QTreeView)
+
+        try:
+            currTabIndex = self.main_ui.tabWidget.currentIndex()
+            # currTabName = self.main_ui.tabWidget.tabText(currTabIndex)
+            currDirPath = self.main_ui.tabWidget.tabToolTip(currTabIndex)
+            # debug.info(currDirPath)
+            self.main_ui.currentFolderBox.clear()
+            self.main_ui.currentFolderBox.setText(currDirPath)
+        except:
+            debug.info(str(sys.exc_info()))
+        # currTabIndex = self.main_ui.tabWidget.currentIndex()
+        # debug.info(openTabs)
+
+
+    def close_current_tab(self, i):
+        # global currIconFiles
+        # global currListFiles
+        #
+        # currIconFiles = self.main_ui.tabWidget.currentWidget().findChild(QtWidgets.QListView)
+        # currListFiles = self.main_ui.tabWidget.currentWidget().findChild(QtWidgets.QTreeView)
+        debug.info(i)
+        if self.main_ui.tabWidget.count() < 2:
+            return
+
+        self.main_ui.tabWidget.removeTab(i)
+        # try:
+        #     openTabs.pop(list(openTabs.keys())[i])
+        # except:
+        #     debug.info(str(sys.exc_info()))
 
 
     def loadFavourites(self):
@@ -370,8 +525,8 @@ class filesWidget():
 
         menu = QtWidgets.QMenu()
         self.setStyle(menu)
-        rename = menu.addAction("Rename")
-        remove = menu.addAction("Remove")
+        rename = menu.addAction(QtGui.QIcon(self.renameIcon),"Rename")
+        remove = menu.addAction(QtGui.QIcon(self.removeIcon),"Remove")
         # action = menu.exec_(context.mapToGlobal(pos))
         action = menu.exec_(button.mapToGlobal(pos))
 
@@ -447,11 +602,32 @@ class filesWidget():
 
 
     def openDir(self, dirPath):
+        global currListFiles
+
+        if not os.path.exists(dirPath):
+            self.messages("red", "Error! Path not found.")
+            return
+
         self.clearAllSelection()
         self.openListDir(dirPath)
         self.openIconDir(dirPath)
 
         self.main_ui.pathBox.setText(dirPath)
+
+        currDirPath = str(dirPath)
+        currDirName = str(currDirPath.split(os.sep)[-1])
+        currTabIndex = self.main_ui.tabWidget.currentIndex()
+        # debug.info(currTabIndex)
+        # openTabs[currTabIndex] = {currDirName:currDirPath}
+
+        self.main_ui.tabWidget.setTabText(currTabIndex, currDirName)
+        self.main_ui.tabWidget.setTabToolTip(currTabIndex, currDirPath)
+        try:
+            currListFiles.setColumnWidth(0, 400)
+            # self.main_ui.currentFolderBox.clear()
+            # self.main_ui.currentFolderBox.setText(currDirPath)
+        except:
+            debug.info(str(sys.exc_info()))
 
         worker = Worker(self.genThumb,dirPath)
         self.threadpool.start(worker)
@@ -473,7 +649,7 @@ class filesWidget():
                 # debug.info(ext)
 
                 if ext in mimeTypes["video"]:
-                    thumb_image = filesThumbsDir + f + ".png"
+                    thumb_image = filesThumbsDir + f + ".jpeg"
                     if os.path.exists(thumb_image):
                         pass
                     else:
@@ -486,7 +662,7 @@ class filesWidget():
                             debug.info(str(sys.exc_info()))
 
                 if ext in mimeTypes["image"]:
-                    thumb_image = filesThumbsDir + f + ".png"
+                    thumb_image = filesThumbsDir + f + ".jpeg"
                     if os.path.exists(thumb_image):
                         pass
                     else:
@@ -502,6 +678,8 @@ class filesWidget():
 
     def openListDir(self, dirPath):
         global CUR_DIR_SELECTED
+        global currIconFiles
+        global currListFiles
 
         CUR_DIR_SELECTED = dirPath.strip()
         debug.info(CUR_DIR_SELECTED)
@@ -521,7 +699,10 @@ class filesWidget():
 
             modelFiles = FSM(parent=self.main_ui)
             modelFiles.setIconProvider(IconProvider())
-            self.main_ui.listFiles.setModel(modelFiles)
+            try:
+                currListFiles.setModel(modelFiles)
+            except:
+                debug.info(str(sys.exc_info()))
             modelFiles.setRootPath(CUR_DIR_SELECTED)
 
             modelFiles.setFilter(QtCore.QDir.Dirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
@@ -530,10 +711,11 @@ class filesWidget():
             debug.info(modelFiles.nameFilters())
 
             rootIdx = modelFiles.index(CUR_DIR_SELECTED)
-
-            self.main_ui.listFiles.setRootIndex(rootIdx)
-
-            self.main_ui.listFiles.setItemDelegateForColumn(3, DateFormatDelegate())
+            try:
+                currListFiles.setRootIndex(rootIdx)
+                currListFiles.setItemDelegateForColumn(3, DateFormatDelegate())
+            except:
+                debug.info(str(sys.exc_info()))
             return
         else:
             debug.info("Danger zone")
@@ -546,6 +728,8 @@ class filesWidget():
 
     def openIconDir(self, dirPath):
         global CUR_DIR_SELECTED
+        global currIconFiles
+        global currListFiles
 
         CUR_DIR_SELECTED = dirPath.strip()
         debug.info(CUR_DIR_SELECTED)
@@ -565,7 +749,10 @@ class filesWidget():
 
             modelFiles = FSM4Files(parent=self.main_ui)
             modelFiles.setIconProvider(IconProvider())
-            self.main_ui.iconFiles.setModel(modelFiles)
+            try:
+                currIconFiles.setModel(modelFiles)
+            except:
+                debug.info(str(sys.exc_info()))
             modelFiles.setRootPath(CUR_DIR_SELECTED)
 
             modelFiles.setFilter(QtCore.QDir.Dirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
@@ -574,8 +761,10 @@ class filesWidget():
             debug.info(modelFiles.nameFilters())
 
             rootIdx = modelFiles.index(CUR_DIR_SELECTED)
-
-            self.main_ui.iconFiles.setRootIndex(rootIdx)
+            try:
+                currIconFiles.setRootIndex(rootIdx)
+            except:
+                debug.info(str(sys.exc_info()))
             return
         else:
             debug.info("Danger zone")
@@ -592,21 +781,30 @@ class filesWidget():
 
 
     def clearAllSelection(self):
-        self.main_ui.iconFiles.clearSelection()
-        self.main_ui.listFiles.clearSelection()
+        global currIconFiles
+        global currListFiles
+
+        try:
+            currIconFiles.clearSelection()
+            currListFiles.clearSelection()
+        except:
+            debug.info(str(sys.exc_info()))
         debug.info("Cleared Selection")
 
 
     def changeView(self):
+        global currIconFiles
+        global currListFiles
+
         self.clearAllSelection()
-        if self.main_ui.iconFiles.isHidden():
-            self.main_ui.changeViewButt.setIcon(QtGui.QIcon(listIcon))
-            self.main_ui.iconFiles.show()
-            self.main_ui.listFiles.hide()
+        if currIconFiles.isHidden():
+            self.main_ui.changeViewButt.setIcon(QtGui.QIcon(self.listIcon))
+            currIconFiles.show()
+            currListFiles.hide()
         else:
-            self.main_ui.changeViewButt.setIcon(QtGui.QIcon(iconsIcon))
-            self.main_ui.iconFiles.hide()
-            self.main_ui.listFiles.show()
+            self.main_ui.changeViewButt.setIcon(QtGui.QIcon(self.iconsIcon))
+            currIconFiles.hide()
+            currListFiles.show()
 
 
     def previousDir(self):
@@ -645,16 +843,19 @@ class filesWidget():
 
 
     def getSelectedFiles(self):
+        global currIconFiles
+        global currListFiles
+
         model = None
         selectedIndexes = None
         files =[]
 
-        if self.main_ui.iconFiles.isVisible():
-            model = self.main_ui.iconFiles.model()
-            selectedIndexes = self.main_ui.iconFiles.selectedIndexes()
-        elif self.main_ui.listFiles.isVisible():
-            model = self.main_ui.listFiles.model()
-            selectedIndexes = self.main_ui.listFiles.selectedIndexes()
+        if currIconFiles.isVisible():
+            model = currIconFiles.model()
+            selectedIndexes = currIconFiles.selectedIndexes()
+        elif currListFiles.isVisible():
+            model = currListFiles.model()
+            selectedIndexes = currListFiles.selectedIndexes()
 
         for selectedIndex in selectedIndexes:
             try:
@@ -723,14 +924,14 @@ class filesWidget():
 
         # REMINDER : DO NOT ADD OPEN WITH ACTION
 
-        copyAction = menu.addAction("Copy")
-        cutAction = menu.addAction("Cut")
-        pasteAction = menu.addAction("Paste")
-        newFolderAction = menu.addAction("New Folder")
-        addToFavAction = menu.addAction("Add To Favourites")
-        renameAction = menu.addAction("Rename")
-        deleteAction = menu.addAction("Delete")
-        detailsAction = menu.addAction("Details")
+        copyAction = menu.addAction(QtGui.QIcon(self.copyIcon),"Copy")
+        cutAction = menu.addAction(QtGui.QIcon(self.cutIcon),"Cut")
+        pasteAction = menu.addAction(QtGui.QIcon(self.pasteIcon),"Paste")
+        newFolderAction = menu.addAction(QtGui.QIcon(self.newFolderIcon),"New Folder")
+        addToFavAction = menu.addAction(QtGui.QIcon(self.addFavouritesIcon),"Add To Favourites")
+        renameAction = menu.addAction(QtGui.QIcon(self.renameIcon),"Rename")
+        deleteAction = menu.addAction(QtGui.QIcon(self.deleteIcon),"Delete")
+        detailsAction = menu.addAction(QtGui.QIcon(self.detailsIcon),"Details")
 
         model,selectedIndexes,selectedFiles = self.getSelectedFiles()
         action = menu.exec_(context.mapToGlobal(pos))
@@ -1054,7 +1255,7 @@ class filesWidget():
             # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
             confirm.setWindowTitle("Warning!")
             # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
-            confirm.setIconPixmap(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png")))
+            confirm.setIconPixmap(QtGui.QPixmap(self.helpIcon))
             confirm.setText("<b>Permanently Delete these item(s)?</b>"+"\n")
             confirm.setInformativeText(",\n".join(i for i in fileNames))
             confirm.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)

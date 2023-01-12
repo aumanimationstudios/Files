@@ -160,6 +160,7 @@ QMenuBar::item:pressed {
 
 QMenu {
     border: 1px solid #76797C;
+    border-radius: 2px;
     color: #eff0f1;
     margin: 1px;
 }
@@ -665,6 +666,10 @@ QTabWidget {
   selection-background-color: #455364;
 }
 
+QTabWidget::tab-bar {
+   min-width: 999999px;
+}
+
 QTabWidget QWidget {
   /* Fixes #189 */
   border-radius: 4px;
@@ -693,17 +698,21 @@ QTabBar:focus {
 }
 
 QTabBar::close-button {
-    image: url(:/qss_icons/rc/close.png);
+    /*image: url(:/qss_icons/rc/close.png);*/
+    /*image: url(imageFiles/clear-icon-blue-1.png);*/
+    image: url(imageFiles/new_icons/close.svg);
     background: transparent;
 }
 
 QTabBar::close-button:hover {
-    image: url(:/qss_icons/rc/close-hover.png);
+    /*image: url(imageFiles/clear-icon-1.png);*/
     background: transparent;
+    /*border: 1px solid #76797C;
+    border-radius: 8px;*/
 }
 
 QTabBar::close-button:pressed {
-    image: url(:/qss_icons/rc/close-pressed.png);
+    /*image: url(imageFiles/clear-icon-1.png);*/
     background: transparent;
 }
 
@@ -730,9 +739,9 @@ QTabBar::tab:top:selected {
     border-top-right-radius: 2px;
 }
 
-QTabBar::tab:top:!selected:hover {
+/*QTabBar::tab:top:!selected:hover {
     background-color: #3daee9;
-}
+}*/
 
 
 /* BOTTOM TABS */

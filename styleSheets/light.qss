@@ -160,6 +160,7 @@ QMenuBar::item:pressed {
 
 QMenu {
     border: 1px solid #898683;
+    border-radius: 2px;
     color: #100f0e;
     margin: 1px;
 }
@@ -665,6 +666,11 @@ QTabWidget {
   selection-background-color: #baac9b;
 }
 
+
+QTabWidget::tab-bar {
+   min-width: 999999px;
+}
+
 QTabWidget QWidget {
   /* Fixes #189 */
   border-radius: 4px;
@@ -693,17 +699,18 @@ QTabBar:focus {
 }
 
 QTabBar::close-button {
-    image: url(:/qss_icons/rc/close.png);
+    /*image: url(:/qss_icons/rc/close.png);*/
+    image: url(imageFiles/clear-icon-blue-1.png);
     background: transparent;
 }
 
 QTabBar::close-button:hover {
-    image: url(:/qss_icons/rc/close-hover.png);
+    image: url(imageFiles/clear-icon-1.png);
     background: transparent;
 }
 
 QTabBar::close-button:pressed {
-    image: url(:/qss_icons/rc/close-pressed.png);
+    image: url(imageFiles/clear-icon-1.png);
     background: transparent;
 }
 
@@ -723,16 +730,16 @@ QTabBar::tab:top {
 
 QTabBar::tab:top:selected {
     color: #100f0e;
-    background-color: #54575B;
+    background-color: #e7b9a2;
     border: 1px solid #898683;
     border-bottom: 2px solid #c25116;
     border-top-left-radius: 2px;
     border-top-right-radius: 2px;
 }
 
-QTabBar::tab:top:!selected:hover {
+/*QTabBar::tab:top:!selected:hover {
     background-color: #c25116;
-}
+}*/
 
 
 /* BOTTOM TABS */
