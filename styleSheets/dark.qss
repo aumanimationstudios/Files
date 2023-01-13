@@ -570,7 +570,6 @@ QLineEdit:hover,
 QTextEdit:hover,
 QPlainTextEdit:hover,
 QAbstractView:hover,
-QTreeView:hover,
 QRadioButton:hover {
     border: 1px solid #3daee9;
     color: #eff0f1;
@@ -677,10 +676,11 @@ QTabWidget QWidget {
 
 QTabWidget::pane {
   border: 1px solid #455364;
+  border-top: 0px;
   border-radius: 4px;
   margin: 0px;
   /* Fixes double border inside pane with pyqt5 */
-  padding: 0px;
+  padding: -10px;
 }
 
 QTabWidget::pane:selected {
@@ -720,10 +720,10 @@ QTabBar::close-button:pressed {
 /* TOP TABS */
 
 QTabBar::tab:top {
-    color: #eff0f1;
+    color: #76797C;
     border: 1px solid #76797C;
     border-bottom: 1px transparent black;
-    background-color: #31363b;
+    background-color: #232629;
     padding: 5px;
     min-width: 50px;
     border-top-left-radius: 2px;
@@ -732,9 +732,9 @@ QTabBar::tab:top {
 
 QTabBar::tab:top:selected {
     color: #eff0f1;
-    background-color: #54575B;
+    background-color: #31363b;
     border: 1px solid #76797C;
-    border-bottom: 2px solid #3daee9;
+    border-bottom: 0px solid #3daee9;
     border-top-left-radius: 2px;
     border-top-right-radius: 2px;
 }
@@ -1126,7 +1126,7 @@ QHeaderView::section {
     background-color: #31363b;
     color: #eff0f1;
     padding: 3px;
-    border: 1px solid #76797C;
+    border: 0px solid #76797C;
     border-radius: 0px;
     text-align: center;
     color: #76797C;
