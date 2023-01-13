@@ -863,10 +863,14 @@ QDockWidget::float-button:pressed {
     background: rgba(255, 255, 255, 10);
 }
 
-QTreeView,
-QListView {
+QTreeView {
     border: 1px solid #898683;
     background-color: #dcd9d6;
+}
+
+QListView {
+    border: 1px solid #898683;
+    background-color: #cec9c4;
 }
 
 QTreeView:branch:selected,
