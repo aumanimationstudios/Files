@@ -15,7 +15,8 @@ __email__ = "sanathshetty111@gmail.com"
 #DONE : SEARCH
 #DONE : REPLACE WARNING
 #DONE : TAB OPTION
-
+#TODO : THREADING FOR PASTE
+#TODO : THUMBNAILS
 
 import debug
 import constants
@@ -167,50 +168,53 @@ class Worker(QtCore.QRunnable):
 
 class IconProvider(QtWidgets.QFileIconProvider):
     def icon(self, fileInfo):
-        if fileInfo.isDir():
-            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-blue.svg"))
-            return QtGui.QIcon.fromTheme("folder")
-        if fileInfo.isFile():
-            if fileInfo.suffix() in mimeTypes["video"]:
-                filePath = fileInfo.filePath()
-                fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir+fileName+".jpeg"
-                if os.path.exists(thumb_image):
-                    return QtGui.QIcon(thumb_image)
-                else:
-                    if fileName.startswith("."):
-                        pass
+        try:
+            if fileInfo.isDir():
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-blue.svg"))
+                return QtGui.QIcon.fromTheme("folder")
+            if fileInfo.isFile():
+                if fileInfo.suffix() in mimeTypes["video"]:
+                    filePath = fileInfo.filePath()
+                    fileName = fileInfo.fileName()
+                    thumb_image = filesThumbsDir+fileName+".jpeg"
+                    if os.path.exists(thumb_image):
+                        return QtGui.QIcon(thumb_image)
                     else:
-                        # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
-                        return QtGui.QIcon.fromTheme("video-x-generic")
-                return QtGui.QIcon.fromTheme("video-x-generic")
+                        if fileName.startswith("."):
+                            pass
+                        else:
+                            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
+                            return QtGui.QIcon.fromTheme("video-x-generic")
+                    return QtGui.QIcon.fromTheme("video-x-generic")
 
-            if fileInfo.suffix() in mimeTypes["audio"]:
-                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
-                return QtGui.QIcon.fromTheme("audio-x-generic")
+                if fileInfo.suffix() in mimeTypes["audio"]:
+                    # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
+                    return QtGui.QIcon.fromTheme("audio-x-generic")
 
-            if fileInfo.suffix() in mimeTypes["image"]:
-                filePath = fileInfo.filePath()
-                fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir + fileName + ".jpeg"
-                if os.path.exists(thumb_image):
-                    return QtGui.QIcon(thumb_image)
-                else:
-                    if fileName.startswith("."):
-                        pass
+                if fileInfo.suffix() in mimeTypes["image"]:
+                    filePath = fileInfo.filePath()
+                    fileName = fileInfo.fileName()
+                    thumb_image = filesThumbsDir + fileName + ".jpeg"
+                    if os.path.exists(thumb_image):
+                        return QtGui.QIcon(thumb_image)
                     else:
-                        # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
-                        return QtGui.QIcon.fromTheme("image-x-generic")
-                return QtGui.QIcon.fromTheme("image-x-generic")
+                        if fileName.startswith("."):
+                            pass
+                        else:
+                            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
+                            return QtGui.QIcon.fromTheme("image-x-generic")
+                    return QtGui.QIcon.fromTheme("image-x-generic")
 
-            if fileInfo.suffix() in mimeTypes["text"]:
-                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
-                return QtGui.QIcon.fromTheme("text-x-generic")
+                if fileInfo.suffix() in mimeTypes["text"]:
+                    # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
+                    return QtGui.QIcon.fromTheme("text-x-generic")
 
-            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "empty-blue.svg"))
-            return QtGui.QIcon.fromTheme("application-x-zerosize")
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "empty-blue.svg"))
+                return QtGui.QIcon.fromTheme("application-x-zerosize")
+            # return QtWidgets.QFileIconProvider.icon(self, fileInfo)
+        except:
+            debug.info(str(sys.exc_info()))
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
-
 
 class FSM4Files(QtWidgets.QFileSystemModel):
 
@@ -583,7 +587,7 @@ class filesWidget():
             # self.messages("green","Generating thumbnails")
             self.main_ui.treeDirs.itemsExpandable = True
             modelDirs = FSM(parent=self.main_ui)
-            # modelDirs.setIconProvider(IconProvider())
+            modelDirs.setIconProvider(IconProvider())
             # modelDirs.setIconProvider(CustomIconProvider())
             modelDirs.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
             modelDirs.setRootPath(ROOTDIRNEW)
@@ -698,7 +702,7 @@ class filesWidget():
             self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
             modelFiles = FSM(parent=self.main_ui)
-            # modelFiles.setIconProvider(IconProvider())
+            modelFiles.setIconProvider(IconProvider())
             try:
                 currListFiles.setModel(modelFiles)
             except:
@@ -748,7 +752,7 @@ class filesWidget():
             self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
             modelFiles = FSM4Files(parent=self.main_ui)
-            # modelFiles.setIconProvider(IconProvider())
+            modelFiles.setIconProvider(IconProvider())
             try:
                 currIconFiles.setModel(modelFiles)
             except:
