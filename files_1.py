@@ -74,7 +74,7 @@ if os.path.exists(filesThumbsDir):
         # debug.info(modTimesinceEpoc)
         file_mod_time = datetime.fromtimestamp(os.stat(file_path).st_mtime)  # This is a datetime.datetime object!
         now = datetime.today()
-        max_delay = timedelta(minutes=720)
+        max_delay = timedelta(minutes=21600)
         if now - file_mod_time > max_delay:
             # debug.info("purge now")
             os.remove(file_path)
