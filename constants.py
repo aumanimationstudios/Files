@@ -35,14 +35,24 @@ mimeConvertCmds = {
 }
 
 mimeTypesOpenCmds = {
+    "image": "pqiv -i -t -l --browse --max-depth=1 \"{1}\" ",
+    "video": "mpv --screenshot-directory=/tmp/ --input-conf={0} \"{1}\" ",
+    "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showcqt=s=1024x512:r=60[vo]' \"{0}\" ",
+    "text": "leafpad \"{0}\" ",
+    "pdf": "pdfReader \"{0}\" "
+
+
     # "image": "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} \"{1}\" ",
     # "image": "pqiv -i -t --bind-key='<Mouse-Scroll-1> { set_scale_level_relative(1.1) }' --bind-key='<Mouse-Scroll-2> { set_scale_level_relative(0.9) }' \"{1}\" ",
     # "image": "pqiv -i -t --bind-key='<Mouse-Scroll-1> { set_scale_level_relative(1.1); }' \"{1}\" ",
-    "image": "pqiv -i -t -l --browse --max-depth=1 \"{1}\" ",
-    "video": "mpv --screenshot-directory=/tmp/ --input-conf={0} \"{1}\" ",
-    "audio": "mpv \"{0}\" ",
-    "text": "leafpad \"{0}\" ",
-    "pdf": "pdfReader \"{0}\" "
+
+    # "audio": "mpv --lavfi-complex='[aid1] asplit [ao] [v] ; [v] showwaves=mode=line:split_channels=1 [vo]' \"{0}\" ",
+    # "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showcqt[vo]' \"{0}\" ",
+
+    # "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]avectorscope=m=polar:s=800x400[vo]' \"{0}\" ",
+    # "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showspectrum=color=fire:scale=log:orientation=vertical:overlap=1:s=1024x512[vo]' \"{0}\" ",
+    # "audio": "mpv --lavfi-complex='-i gradients=n=7:type=circular,format=rgb0' \"{0}\" ",
+    # "audio": "mpv --lavfi-complex='-i gradients=n=7:type=circular,format=rgb0' \"{0}\" ",
 
     # "blender": {"linux":["project_assigned_application"]}, # Just enter "project_assigned_application" to open certain kinds of files with project assigned apps.
     # "pdf": {"linux":["system_assigned_application"]}, # Just enter "system_assigned_application" to open certain kinds of files with project assigned apps.
