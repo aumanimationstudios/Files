@@ -609,7 +609,7 @@ class filesWidget():
             # self.messages("green","Generating thumbnails")
             # self.main_ui.treeDirs.itemsExpandable = True
             modelDirs = FSM(parent=self.main_ui)
-            modelDirs.setIconProvider(IconProvider())
+            # modelDirs.setIconProvider(IconProvider())
             # modelDirs.setIconProvider(CustomIconProvider())
             modelDirs.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
             modelDirs.setRootPath(ROOTDIRNEW)
@@ -724,7 +724,7 @@ class filesWidget():
             self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
             modelFiles = FSM(parent=self.main_ui)
-            modelFiles.setIconProvider(IconProvider())
+            # modelFiles.setIconProvider(IconProvider())
             try:
                 currListFiles.setModel(modelFiles)
             except:
@@ -774,7 +774,7 @@ class filesWidget():
             self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
             modelFiles = FSM4Files(parent=self.main_ui)
-            modelFiles.setIconProvider(IconProvider())
+            # modelFiles.setIconProvider(IconProvider())
             try:
                 currIconFiles.setModel(modelFiles)
             except:
