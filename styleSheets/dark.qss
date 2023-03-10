@@ -428,7 +428,6 @@ QTextEdit {
 
 QPlainTextEdit {
     background-color: #232629;
-    ;
     color: #eff0f1;
     border-radius: 2px;
     border: 1px solid #76797C;
@@ -511,7 +510,7 @@ QToolBar::separator:vertical {
 }
 
 QToolButton#qt_toolbar_ext_button {
-    background: #58595a
+    background: #58595a;
 }
 
 QPushButton {
@@ -870,13 +869,19 @@ QTreeView {
     background-color: #232629;
 }
 
+QTreeView::item {
+    padding-left: 2px;
+    padding-top: 2px;
+}
+
 QListView {
     border: 1px solid #76797C;
     background-color: #31363b;
+    padding-top: 4px;
 }
 
-QTreeView:branch:selected,
-QTreeView:branch:hover {
+QTreeView::branch:selected,
+QTreeView::branch:hover {
     background: url(:/qss_icons/rc/transparent.png);
 }
 
