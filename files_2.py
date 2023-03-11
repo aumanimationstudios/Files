@@ -208,6 +208,48 @@ class FSM(QtWidgets.QFileSystemModel):
     def __init__(self,**kwargs):
         super(FSM, self).__init__(**kwargs)
 
+    def data(self, index, role):
+        if role == Qt.DecorationRole and index.column() == 0:
+            fileInfo = self.fileInfo(index)
+
+            if fileInfo.isDir():
+                return QtGui.QIcon.fromTheme("folder")
+            if fileInfo.isFile():
+                if fileInfo.suffix() in mimeTypes["video"]:
+                    fileName = fileInfo.fileName()
+                    thumb_image = filesThumbsDir+fileName+".jpeg"
+                    if os.path.exists(thumb_image):
+                        return QtGui.QIcon(thumb_image)
+                    else:
+                        if fileName.startswith("."):
+                            pass
+                        else:
+                            return QtGui.QIcon.fromTheme("video-x-generic")
+                    return QtGui.QIcon.fromTheme("video-x-generic")
+
+                if fileInfo.suffix() in mimeTypes["audio"]:
+                    return QtGui.QIcon.fromTheme("audio-x-generic")
+
+                if fileInfo.suffix() in mimeTypes["image"]:
+                    fileName = fileInfo.fileName()
+                    thumb_image = filesThumbsDir + fileName + ".jpeg"
+                    if os.path.exists(thumb_image):
+                        return QtGui.QIcon(thumb_image)
+                    else:
+                        if fileName.startswith("."):
+                            pass
+                        else:
+                            return QtGui.QIcon.fromTheme("image-x-generic")
+                    return QtGui.QIcon.fromTheme("image-x-generic")
+
+                if fileInfo.suffix() in mimeTypes["text"]:
+                    return QtGui.QIcon.fromTheme("text-x-generic")
+
+                return QtGui.QIcon.fromTheme("text-x-preview")
+
+        return QFileSystemModel.data(self, index, role)
+
+
 
 class DateFormatDelegate(QtWidgets.QStyledItemDelegate):
     def __init__(self, parent=None):
@@ -773,7 +815,7 @@ class filesWidget():
             self.main_ui.currentFolderBox.clear()
             self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
 
-            modelFiles = FSM4Files(parent=self.main_ui)
+            modelFiles = FSM(parent=self.main_ui)
             # modelFiles.setIconProvider(IconProvider())
             try:
                 currIconFiles.setModel(modelFiles)
