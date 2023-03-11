@@ -17,6 +17,7 @@ __email__ = "sanathshetty111@gmail.com"
 #DONE : TAB OPTION
 #DONE : FIX CHANGE VIEW
 #TODO : RSYNC IN THREAD
+#TODO : THUMBS IN THREAD
 
 import debug
 import constants
@@ -213,7 +214,8 @@ class FSM(QtWidgets.QFileSystemModel):
             fileInfo = self.fileInfo(index)
 
             if fileInfo.isDir():
-                return QtGui.QIcon.fromTheme("folder")
+                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
+                # return QtGui.QIcon.fromTheme("folder")
             if fileInfo.isFile():
                 if fileInfo.suffix() in mimeTypes["video"]:
                     fileName = fileInfo.fileName()
@@ -245,7 +247,8 @@ class FSM(QtWidgets.QFileSystemModel):
                 if fileInfo.suffix() in mimeTypes["text"]:
                     return QtGui.QIcon.fromTheme("text-x-generic")
 
-                return QtGui.QIcon.fromTheme("text-x-preview")
+                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "file.svg"))
+                # return QtGui.QIcon.fromTheme("text-x-preview")
 
         return QFileSystemModel.data(self, index, role)
 
