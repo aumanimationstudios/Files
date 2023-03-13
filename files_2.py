@@ -215,7 +215,8 @@ class FSM(QtWidgets.QFileSystemModel):
 
             if fileInfo.isDir():
                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
-                return QtGui.QIcon.fromTheme("folder")
+                return QtGui.QIcon("/usr/share/icons/elementary-xfce/status/symbolic/folder-open-symbolic.svg")
+                # return QtGui.QIcon.fromTheme("folder")
             if fileInfo.isFile():
                 if fileInfo.suffix() in mimeTypes["video"]:
                     fileName = fileInfo.fileName()
@@ -248,7 +249,8 @@ class FSM(QtWidgets.QFileSystemModel):
                     return QtGui.QIcon.fromTheme("text-x-generic")
 
                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "file.svg"))
-                return QtGui.QIcon.fromTheme("text-x-generic")
+                return QtGui.QIcon("/usr/share/icons/elementary-xfce/status/symbolic/checkbox-symbolic.svg")
+                # return QtGui.QIcon.fromTheme("text-x-generic")
 
         return QFileSystemModel.data(self, index, role)
 
@@ -1635,7 +1637,7 @@ class getSizeThread(QThread):
 if __name__ == '__main__':
     setproctitle.setproctitle("FILES")
     app = QtWidgets.QApplication(sys.argv)
-    QIcon.setThemeName("elementary")
-    QIcon.setThemeSearchPaths(["/usr/share/icons"])
+    # QtGui.QIcon.setThemeName("elementary")
+    # QtGui.QIcon.setThemeSearchPaths(["/usr/share/icons"])
     window = filesWidget()
     sys.exit(app.exec_())
