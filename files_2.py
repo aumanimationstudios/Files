@@ -215,7 +215,7 @@ class FSM(QtWidgets.QFileSystemModel):
 
             if fileInfo.isDir():
                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
-                return QtGui.QIcon("/usr/share/icons/elementary-xfce/status/symbolic/folder-open-symbolic.svg")
+                return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-symbolic.svg")
                 # return QtGui.QIcon.fromTheme("folder")
             if fileInfo.isFile():
                 if fileInfo.suffix() in mimeTypes["video"]:
@@ -227,11 +227,14 @@ class FSM(QtWidgets.QFileSystemModel):
                         if fileName.startswith("."):
                             pass
                         else:
-                            return QtGui.QIcon.fromTheme("video-x-generic")
-                    return QtGui.QIcon.fromTheme("video-x-generic")
+                            return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
+                            # return QtGui.QIcon.fromTheme("video-x-generic")
+                    # return QtGui.QIcon.fromTheme("video-x-generic")
+                    return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
 
                 if fileInfo.suffix() in mimeTypes["audio"]:
-                    return QtGui.QIcon.fromTheme("audio-x-generic")
+                    # return QtGui.QIcon.fromTheme("audio-x-generic")
+                    return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-music-symbolic.svg")
 
                 if fileInfo.suffix() in mimeTypes["image"]:
                     fileName = fileInfo.fileName()
@@ -242,14 +245,17 @@ class FSM(QtWidgets.QFileSystemModel):
                         if fileName.startswith("."):
                             pass
                         else:
-                            return QtGui.QIcon.fromTheme("image-x-generic")
-                    return QtGui.QIcon.fromTheme("image-x-generic")
+                            return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
+                            # return QtGui.QIcon.fromTheme("image-x-generic")
+                    # return QtGui.QIcon.fromTheme("image-x-generic")
+                    return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
 
                 if fileInfo.suffix() in mimeTypes["text"]:
-                    return QtGui.QIcon.fromTheme("text-x-generic")
+                    return QtGui.QIcon("/usr/share/icons/elementary-xfce/mimes/symbolic/text-x-generic-symbolic.svg")
+                    # return QtGui.QIcon.fromTheme("text-x-generic")
 
                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "file.svg"))
-                return QtGui.QIcon("/usr/share/icons/elementary-xfce/status/symbolic/checkbox-symbolic.svg")
+                return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-documents-symbolic.svg")
                 # return QtGui.QIcon.fromTheme("text-x-generic")
 
         return QFileSystemModel.data(self, index, role)
