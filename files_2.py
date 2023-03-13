@@ -154,8 +154,8 @@ class Worker(QtCore.QRunnable):
 class IconProvider(QtWidgets.QFileIconProvider):
     def icon(self, fileInfo):
         if fileInfo.isDir():
-            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-blue.svg"))
-            return QtGui.QIcon.fromTheme("folder")
+            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
+            # return QtGui.QIcon.fromTheme("folder")
         if fileInfo.isFile():
             if fileInfo.suffix() in mimeTypes["video"]:
                 filePath = fileInfo.filePath()
@@ -193,15 +193,15 @@ class IconProvider(QtWidgets.QFileIconProvider):
                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
                 return QtGui.QIcon.fromTheme("text-x-generic")
 
-            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "empty-blue.svg"))
-            return QtGui.QIcon.fromTheme("application-x-zerosize")
+            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "file.svg"))
+            # return QtGui.QIcon.fromTheme("application-x-zerosize")
         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
 
 
-class FSM4Files(QtWidgets.QFileSystemModel):
-
-    def __init__(self,**kwargs):
-        super(FSM4Files, self).__init__(**kwargs)
+# class FSM4Files(QtWidgets.QFileSystemModel):
+#
+#     def __init__(self,**kwargs):
+#         super(FSM4Files, self).__init__(**kwargs)
 
 
 class FSM(QtWidgets.QFileSystemModel):
@@ -214,8 +214,8 @@ class FSM(QtWidgets.QFileSystemModel):
             fileInfo = self.fileInfo(index)
 
             if fileInfo.isDir():
-                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
-                # return QtGui.QIcon.fromTheme("folder")
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
+                return QtGui.QIcon.fromTheme("folder")
             if fileInfo.isFile():
                 if fileInfo.suffix() in mimeTypes["video"]:
                     fileName = fileInfo.fileName()
@@ -247,8 +247,8 @@ class FSM(QtWidgets.QFileSystemModel):
                 if fileInfo.suffix() in mimeTypes["text"]:
                     return QtGui.QIcon.fromTheme("text-x-generic")
 
-                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "file.svg"))
-                # return QtGui.QIcon.fromTheme("text-x-preview")
+                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "file.svg"))
+                return QtGui.QIcon.fromTheme("text-x-generic")
 
         return QFileSystemModel.data(self, index, role)
 
@@ -1635,5 +1635,7 @@ class getSizeThread(QThread):
 if __name__ == '__main__':
     setproctitle.setproctitle("FILES")
     app = QtWidgets.QApplication(sys.argv)
+    QIcon.setThemeName("elementary")
+    QIcon.setThemeSearchPaths(["/usr/share/icons"])
     window = filesWidget()
     sys.exit(app.exec_())
