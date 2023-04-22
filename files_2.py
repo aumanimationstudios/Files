@@ -32,7 +32,7 @@ import sys
 import stat
 from datetime import datetime, timedelta
 import re
-import pexpect
+# import pexpect
 import setproctitle
 import signal
 import subprocess
@@ -151,57 +151,53 @@ class Worker(QtCore.QRunnable):
             self.signals.finished.emit()
 
 
-class IconProvider(QtWidgets.QFileIconProvider):
-    def icon(self, fileInfo):
-        if fileInfo.isDir():
-            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
-            # return QtGui.QIcon.fromTheme("folder")
-        if fileInfo.isFile():
-            if fileInfo.suffix() in mimeTypes["video"]:
-                filePath = fileInfo.filePath()
-                fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir+fileName+".jpeg"
-                if os.path.exists(thumb_image):
-                    return QtGui.QIcon(thumb_image)
-                else:
-                    if fileName.startswith("."):
-                        pass
-                    else:
-                        # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
-                        return QtGui.QIcon.fromTheme("video-x-generic")
-                return QtGui.QIcon.fromTheme("video-x-generic")
 
-            if fileInfo.suffix() in mimeTypes["audio"]:
-                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
-                return QtGui.QIcon.fromTheme("audio-x-generic")
-
-            if fileInfo.suffix() in mimeTypes["image"]:
-                filePath = fileInfo.filePath()
-                fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir + fileName + ".jpeg"
-                if os.path.exists(thumb_image):
-                    return QtGui.QIcon(thumb_image)
-                else:
-                    if fileName.startswith("."):
-                        pass
-                    else:
-                        # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
-                        return QtGui.QIcon.fromTheme("image-x-generic")
-                return QtGui.QIcon.fromTheme("image-x-generic")
-
-            if fileInfo.suffix() in mimeTypes["text"]:
-                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
-                return QtGui.QIcon.fromTheme("text-x-generic")
-
-            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "file.svg"))
-            # return QtGui.QIcon.fromTheme("application-x-zerosize")
-        return QtWidgets.QFileIconProvider.icon(self, fileInfo)
-
-
-# class FSM4Files(QtWidgets.QFileSystemModel):
+# class IconProvider(QtWidgets.QFileIconProvider):
+#     def icon(self, fileInfo):
+#         if fileInfo.isDir():
+#             return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
+#             # return QtGui.QIcon.fromTheme("folder")
+#         if fileInfo.isFile():
+#             if fileInfo.suffix() in mimeTypes["video"]:
+#                 filePath = fileInfo.filePath()
+#                 fileName = fileInfo.fileName()
+#                 thumb_image = filesThumbsDir+fileName+".jpeg"
+#                 if os.path.exists(thumb_image):
+#                     return QtGui.QIcon(thumb_image)
+#                 else:
+#                     if fileName.startswith("."):
+#                         pass
+#                     else:
+#                         # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
+#                         return QtGui.QIcon.fromTheme("video-x-generic")
+#                 return QtGui.QIcon.fromTheme("video-x-generic")
 #
-#     def __init__(self,**kwargs):
-#         super(FSM4Files, self).__init__(**kwargs)
+#             if fileInfo.suffix() in mimeTypes["audio"]:
+#                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
+#                 return QtGui.QIcon.fromTheme("audio-x-generic")
+#
+#             if fileInfo.suffix() in mimeTypes["image"]:
+#                 filePath = fileInfo.filePath()
+#                 fileName = fileInfo.fileName()
+#                 thumb_image = filesThumbsDir + fileName + ".jpeg"
+#                 if os.path.exists(thumb_image):
+#                     return QtGui.QIcon(thumb_image)
+#                 else:
+#                     if fileName.startswith("."):
+#                         pass
+#                     else:
+#                         # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
+#                         return QtGui.QIcon.fromTheme("image-x-generic")
+#                 return QtGui.QIcon.fromTheme("image-x-generic")
+#
+#             if fileInfo.suffix() in mimeTypes["text"]:
+#                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
+#                 return QtGui.QIcon.fromTheme("text-x-generic")
+#
+#             return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "file.svg"))
+#             # return QtGui.QIcon.fromTheme("application-x-zerosize")
+#         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
+
 
 
 class FSM(QtWidgets.QFileSystemModel):
