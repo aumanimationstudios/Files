@@ -60,6 +60,7 @@ sys.path.append(projDir)
 
 rootDir = "/"
 homeDir = os.path.expanduser("~")
+externalToolsDir = "/proj/standard/share/"
 
 filesThumbsDir = homeDir+"/.cache/thumbnails/files_thumbs/"
 if os.path.exists(filesThumbsDir):
@@ -1354,8 +1355,15 @@ class filesWidget():
                     removeCmd = "rm -frv \"{0}\" ".format(x)
                     debug.info(shlex.split(removeCmd))
                     if removeCmd:
-                        subprocess.Popen(shlex.split(removeCmd))
-                        debug.info("Deleted "+x)
+                        p = subprocess.Popen(shlex.split(removeCmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        output, error = p.communicate()
+                        if p.returncode == 0:
+                            debug.info("Deleted "+x)
+                            self.changeDir()
+                        else:
+                            debug.info(f"Command failed with return code: {p.returncode}")
+                        # debug.info("Deleted "+x)
+                        # self.changeDir()
         else:
             debug.info("Error! No permission to delete.")
             self.messages("red","Error! No permission to delete.")
@@ -1498,6 +1506,7 @@ class filesWidget():
                     dT = downloadVideoThread(path,link, app)
                     dT.result.connect(lambda x : self.afterVideoDownload(x))
                     dT.progress.connect(lambda x : self.updateDownloadProgress(x))
+                    # dT.finished.connect(lambda x : self.afterVideoDownload(x))
                     dT.start()
                 else:
                     debug.info("No permission to write")
@@ -1511,9 +1520,14 @@ class filesWidget():
 
 
     def cancelVideoDownload(self):
+        debug.info(currDownloads)
         for proc in currDownloads:
-            debug.info(proc.pid)
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            try:
+                debug.info(proc.pid)
+                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            except:
+                debug.info(str(sys.exc_info()))
+        self.afterVideoDownload("Cancelled")
 
 
 
@@ -1573,38 +1587,53 @@ class downloadVideoThread(QThread):
         self.link = link
 
     def run(self):
-        downCmd = os.path.join(projDir,"youtube-dl")+" --external-downloader aria2c --external-downloader-args " \
+        downCmd = os.path.join(externalToolsDir,"yt-dlp_linux")+" --external-downloader aria2c --external-downloader-args " \
                   "'--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
                   "-o \"{0}\" \"{1}\" ".format(self.path,self.link)
         debug.info(downCmd)
         try:
-            p = subprocess.Popen(shlex.split(downCmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                 bufsize=1,universal_newlines=True, preexec_fn=os.setsid)
+            # p = subprocess.Popen(shlex.split(downCmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            #                      bufsize=1,universal_newlines=True, preexec_fn=os.setsid)
+            # currDownloads.append(p)
+            # msg = ""
+
+            p = subprocess.Popen(shlex.split(downCmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             currDownloads.append(p)
             msg = ""
-            for line in iter(p.stdout.readline, b''):
-                debug.info(line)
-                if "Unable to download webpage" in line:
-                    msg = "Unable to download video"
-                elif "already been downloaded and merged" in line:
-                    msg = "Already been downloaded and merged"
-                elif "100%" in line:
-                    msg = "Video Downloaded"
-                elif "Unsupported URL" in line:
-                    msg = "Unsupported URL"
-                elif "looks truncated" in line:
-                    msg = "Url looks truncated"
-                elif "Unable to extract video data" in line:
-                    msg = "Unable to extract video data"
-                elif "Download aborted" in line:
-                    msg = "Download aborted"
-                elif "Redirecting to" in line:
-                    msg = "Aborted"
-                elif "%" in line:
-                    synData = (tuple(filter(None, line.strip().split('('))))
-                    if synData:
-                        prctg = synData[1].split("%")[0].strip()
-                        self.progress.emit(int(prctg))
+            for line in p.stdout:
+                if line:
+                    debug.info(line)
+                    if "Unable to download webpage" in line:
+                        msg = "Unable to download video"
+                    elif "already been downloaded and merged" in line:
+                        msg = "Already been downloaded and merged"
+                    elif "100%" in line:
+                        msg = "Video Downloaded"
+                    elif "Unsupported URL" in line:
+                        msg = "Unsupported URL"
+                    elif "looks truncated" in line:
+                        msg = "Url looks truncated"
+                    elif "Unable to extract video data" in line:
+                        msg = "Unable to extract video data"
+                    elif "Download aborted" in line:
+                        msg = "Download aborted"
+                    elif "Redirecting to" in line:
+                        msg = "Aborted"
+                    elif "%" in line:
+                        synData = (tuple(filter(None, line.strip().split('('))))
+                        if synData:
+                            prctg = synData[1].split("%")[0].strip()
+                            self.progress.emit(int(prctg))
+                    
+                    elif "Deleting original file" in line:
+                        self.result.emit("Download finished")
+                        self.finished.emit()
+                        
+            if p.returncode == 0:
+                self.result.emit("Download finished")
+                self.finished.emit()
+            else:
+                debug.info(f"Command failed with return code: {p.returncode}")
         except:
             debug.info(str(sys.exc_info()))
         else:
