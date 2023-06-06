@@ -40,7 +40,8 @@ mimeTypesOpenCmds = {
     "video": "mpv --screenshot-directory=/tmp/ --input-conf={0} \"{1}\" ",
     "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showcqt=s=1024x512:r=60[vo]' \"{0}\" ",
     "text": "leafpad \"{0}\" ",
-    "pdf": "pdfReader \"{0}\" "
+    "pdf": "pdfReader \"{0}\" ",
+    "pureref" : "pureref \"{0}\" "
 
     # "image": "pqiv -i -t -l --browse --max-depth=1 \"{1}\" ",
     # "image": "pqiv -i -t --bind-key='<Mouse-Scroll-1> { set_scale_level_relative(1.1) }' --bind-key='<Mouse-Scroll-2> { set_scale_level_relative(0.9) }' \"{1}\" ",

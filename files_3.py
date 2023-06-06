@@ -993,6 +993,8 @@ class filesWidget():
                             openCmd = mimeTypesOpenCmds["text"].format(filePath)
                         elif suffix == "pdf":
                             openCmd = mimeTypesOpenCmds["pdf"].format(filePath)
+                        elif suffix == "pur":
+                            openCmd = mimeTypesOpenCmds["pureref"].format(filePath)
 
                         debug.info(shlex.split(openCmd))
                         if openCmd:
