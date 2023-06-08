@@ -508,6 +508,8 @@ class filesWidget():
             # debug.info(currDirPath)
             self.main_ui.currentFolderBox.clear()
             self.main_ui.currentFolderBox.setText(currDirPath)
+            self.main_ui.pathBox.clear()
+            self.main_ui.pathBox.setText(currDirPath)
         except:
             debug.info(str(sys.exc_info()))
         # currTabIndex = self.main_ui.tabWidget.currentIndex()
