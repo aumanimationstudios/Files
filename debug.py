@@ -9,7 +9,8 @@ import os
 from logging import *
 import tempfile
 
-tempDir = tempfile.gettempdir()
+# tempDir = tempfile.gettempdir()
+tempDir = "/crap/LOCAL.crap"
 user = os.environ['USER']
 
 FORMAT = "%(asctime)s : %(pathname)s : %(funcName)s - %(levelname)s - %(lineno)d - %(message)s"

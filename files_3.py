@@ -365,6 +365,7 @@ class filesWidget():
         self.main_ui.searchButt.clicked.connect(lambda x: self.search())
 
         self.main_ui.audioRestartButt.clicked.connect(lambda x: self.audioRestart())
+        self.main_ui.fixPenDisplayButt.clicked.connect(lambda x: self.fixPenDisplay())
         self.main_ui.blenderMediaViewerButt.clicked.connect(lambda x: self.blenderMediaViewer())
         self.main_ui.downloadButt.clicked.connect(lambda x: self.downloadVideo())
         self.main_ui.cancelButt.clicked.connect(lambda x: self.cancelVideoDownload())
@@ -1462,9 +1463,15 @@ class filesWidget():
 
 
     def audioRestart(self):
-        arCmd = "audio-restart"
+        arCmd = "/usr/local/bin/audio-restart"
         debug.info(arCmd)
         subprocess.Popen(arCmd)
+
+
+    def fixPenDisplay(self):
+        pdcmd = "/proj/standard/share/penDisplay.py"
+        debug.info(pdcmd)
+        subprocess.Popen(pdcmd)
 
 
     def blenderMediaViewer(self):
