@@ -307,24 +307,46 @@ class filesWidget():
         self.initConfig()
         self.loadFavourites()
 
+        # ICONS
+        self.homeIcon = os.path.join(projDir, "imageFiles", "icons", "home.svg")
+        self.darkIcon = os.path.join(projDir, "imageFiles", "icons", "moon.svg")
+        self.lightIcon = os.path.join(projDir, "imageFiles", "icons", "sun.svg")
+        self.listIcon = os.path.join(projDir, "imageFiles", "icons", "layout-list.svg")
+        self.iconsIcon = os.path.join(projDir, "imageFiles", "icons", "layout-grid.svg")
+        self.prevDirIcon = os.path.join(projDir, "imageFiles", "icons", "arrow-up.svg")
+        self.goIcon = os.path.join(projDir, "imageFiles", "icons", "rotate-cw.svg")
+        self.searchIcon = os.path.join(projDir, "imageFiles", "icons", "search.svg")
+        self.clearIcon = os.path.join(projDir, "imageFiles", "icons", "clear.svg")
+        self.closeIcon = os.path.join(projDir, "imageFiles", "icons", "close.svg")
+        self.addIcon = os.path.join(projDir, "imageFiles", "icons", "plus.svg")
+        self.removeIcon = os.path.join(projDir, "imageFiles", "icons", "minus.svg")
+        self.renameIcon = os.path.join(projDir, "imageFiles", "icons", "edit.svg")
+        self.copyIcon = os.path.join(projDir, "imageFiles", "icons", "copy.svg")
+        self.cutIcon = os.path.join(projDir, "imageFiles", "icons", "cut.svg")
+        self.pasteIcon = os.path.join(projDir, "imageFiles", "icons", "paste.svg")
+        self.deleteIcon = os.path.join(projDir, "imageFiles", "icons", "delete.svg")
+        self.newFolderIcon = os.path.join(projDir, "imageFiles", "icons", "new-folder.svg")
+        self.addFavouritesIcon = os.path.join(projDir, "imageFiles", "icons", "add-favourites.svg")
+        self.detailsIcon = os.path.join(projDir, "imageFiles", "icons", "details.svg")
+
         # listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
-        self.listIcon = os.path.join(projDir, "imageFiles", "new_icons", "view_list.svg")
-        self.iconsIcon = os.path.join(projDir, "imageFiles", "new_icons", "view_icons.svg")
-        self.prevDirIcon = os.path.join(projDir, "imageFiles", "new_icons", "go-up.svg")
-        self.goIcon = os.path.join(projDir, "imageFiles", "new_icons", "reload.svg")
-        self.searchIcon = os.path.join(projDir, "imageFiles", "search_icon.svg")
-        self.closeIcon = os.path.join(projDir, "imageFiles", "new_icons", "close.svg")
-        self.addIcon = os.path.join(projDir, "imageFiles", "new_icons", "add.svg")
-        self.removeIcon = os.path.join(projDir, "imageFiles", "new_icons", "remove.svg")
+        # self.listIcon = os.path.join(projDir, "imageFiles", "new_icons", "view_list.svg")
+        # self.iconsIcon = os.path.join(projDir, "imageFiles", "new_icons", "view_icons.svg")
+        # self.prevDirIcon = os.path.join(projDir, "imageFiles", "new_icons", "go-up.svg")
+        # self.goIcon = os.path.join(projDir, "imageFiles", "new_icons", "reload.svg")
+        # self.searchIcon = os.path.join(projDir, "imageFiles", "search_icon.svg")
+        # self.closeIcon = os.path.join(projDir, "imageFiles", "new_icons", "close.svg")
+        # self.addIcon = os.path.join(projDir, "imageFiles", "new_icons", "add.svg")
+        # self.removeIcon = os.path.join(projDir, "imageFiles", "new_icons", "remove.svg")
         self.helpIcon = os.path.join(projDir, "imageFiles", "help-icon-1.png")
-        self.copyIcon = os.path.join(projDir, "imageFiles", "new_icons", "copy.svg")
-        self.cutIcon = os.path.join(projDir, "imageFiles", "new_icons", "cut.svg")
-        self.pasteIcon = os.path.join(projDir, "imageFiles", "new_icons", "paste.svg")
-        self.newFolderIcon = os.path.join(projDir, "imageFiles", "new_icons", "new_folder.svg")
-        self.addFavouritesIcon = os.path.join(projDir, "imageFiles", "new_icons", "add_favourites.svg")
-        self.renameIcon = os.path.join(projDir, "imageFiles", "new_icons", "rename.svg")
-        self.deleteIcon = os.path.join(projDir, "imageFiles", "new_icons", "delete.svg")
-        self.detailsIcon = os.path.join(projDir, "imageFiles", "new_icons", "details.svg")
+        # self.copyIcon = os.path.join(projDir, "imageFiles", "new_icons", "copy.svg")
+        # self.cutIcon = os.path.join(projDir, "imageFiles", "new_icons", "cut.svg")
+        # self.pasteIcon = os.path.join(projDir, "imageFiles", "new_icons", "paste.svg")
+        # self.newFolderIcon = os.path.join(projDir, "imageFiles", "new_icons", "new_folder.svg")
+        # self.addFavouritesIcon = os.path.join(projDir, "imageFiles", "new_icons", "add_favourites.svg")
+        # self.renameIcon = os.path.join(projDir, "imageFiles", "new_icons", "rename.svg")
+        # self.deleteIcon = os.path.join(projDir, "imageFiles", "new_icons", "delete.svg")
+        # self.detailsIcon = os.path.join(projDir, "imageFiles", "new_icons", "details.svg")
 
 
         # self.main_ui.tabWidget.tabBarDoubleClicked.connect(self.tab_open_doubleclick)
@@ -338,9 +360,11 @@ class filesWidget():
         self.main_ui.previousDirButt.setIcon(QtGui.QIcon(self.prevDirIcon))
         self.main_ui.changeDirButt.setIcon(QtGui.QIcon(self.goIcon))
         self.main_ui.searchButt.setIcon(QtGui.QIcon(self.searchIcon))
+        self.main_ui.homeButt.setIcon(QtGui.QIcon(self.homeIcon))
+        self.main_ui.themeButt.setIcon(QtGui.QIcon(self.lightIcon))
 
-        self.main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(self.closeIcon))
-        self.main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(self.closeIcon))
+        self.main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(self.clearIcon))
+        self.main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(self.clearIcon))
 
         # self.changeViewSc = QShortcut(QKeySequence("Ctrl+V"), self)
         # self.changeViewSc.activated.connect(self.changeView)
@@ -356,8 +380,8 @@ class filesWidget():
         self.main_ui.previousDirButt.setToolTip("Previous Directory (Backspace)")
         self.main_ui.changeDirButt.setToolTip("Change Directory (Enter)")
 
-        self.main_ui.themeButton.clicked.connect(self.changeTheme)
-        # self.main_ui.treeDirs.clicked.connect(lambda x, modelDirs=modelDirs: self.dirSelected(x, modelDirs))
+        self.main_ui.themeButt.clicked.connect(self.changeTheme)
+        self.main_ui.homeButt.clicked.connect(self.goHome)
         self.main_ui.searchBox.textChanged.connect(lambda x : self.search())
         self.main_ui.changeViewButt.clicked.connect(lambda x : self.changeView())
         self.main_ui.previousDirButt.clicked.connect(lambda x: self.previousDir())
@@ -385,7 +409,7 @@ class filesWidget():
         self.messages("white", "")
 
         self.main_ui.splitter01.setSizes([100, 140])
-        self.main_ui.searchButt.hide()
+        # self.main_ui.searchButt.hide()
 
         try:
             currListFiles.setColumnWidth(0, 660)
@@ -393,17 +417,17 @@ class filesWidget():
         except:
             debug.info(str(sys.exc_info()))
 
-        self.main_ui.places_label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
-        self.main_ui.places_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.main_ui.places_label.setText("<b>Places</b>")
+        # self.main_ui.places_label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
+        # self.main_ui.places_label.setAlignment(QtCore.Qt.AlignCenter)
+        # self.main_ui.places_label.setText("<b>Places</b>")
 
         self.main_ui.tools_label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
         self.main_ui.tools_label.setAlignment(QtCore.Qt.AlignCenter)
         self.main_ui.tools_label.setText("<b>Tools</b>")
 
-        self.main_ui.search_label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
-        self.main_ui.search_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.main_ui.search_label.setText("<b>Search</b>")
+        # self.main_ui.search_label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
+        # self.main_ui.search_label.setAlignment(QtCore.Qt.AlignCenter)
+        # self.main_ui.search_label.setText("<b>Search</b>")
 
         self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.main_ui.searchBox.setFocus()
@@ -1453,13 +1477,19 @@ class filesWidget():
         if theme == "light":
             theme = dark
             os.environ['FILES_THEME'] = "dark"
+            self.main_ui.themeButt.setIcon(QtGui.QIcon(self.lightIcon))
         else:
             theme = light
             os.environ['FILES_THEME'] = "light"
+            self.main_ui.themeButt.setIcon(QtGui.QIcon(self.darkIcon))
 
         sS = open(theme, "r")
         self.main_ui.setStyleSheet(sS.read())
         sS.close()
+
+
+    def goHome(self):
+        self.openDir(homeDir)
 
 
     def audioRestart(self):

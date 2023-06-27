@@ -700,17 +700,17 @@ QTabBar:focus {
 
 QTabBar::close-button {
     /*image: url(:/qss_icons/rc/close.png);*/
-    image: url(imageFiles/clear-icon-blue-1.png);
+    image: url(imageFiles/icons/close.svg);
     background: transparent;
 }
 
 QTabBar::close-button:hover {
-    image: url(imageFiles/clear-icon-1.png);
+    /* image: url(imageFiles/clear-icon-1.png); */
     background: transparent;
 }
 
 QTabBar::close-button:pressed {
-    image: url(imageFiles/clear-icon-1.png);
+    /* image: url(imageFiles/clear-icon-1.png); */
     background: transparent;
 }
 

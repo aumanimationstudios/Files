@@ -699,7 +699,7 @@ QTabBar:focus {
 QTabBar::close-button {
     /*image: url(:/qss_icons/rc/close.png);*/
     /*image: url(imageFiles/clear-icon-blue-1.png);*/
-    image: url(imageFiles/new_icons/close.svg);
+    image: url(imageFiles/icons/close.svg);
     background: transparent;
 }
 
