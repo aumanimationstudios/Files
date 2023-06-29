@@ -122,6 +122,7 @@ currIconFiles = None
 currListFiles = None
 currView = "LIST"
 
+
 class WorkerSignals(QtCore.QObject):
     finished = pyqtSignal()
     error = pyqtSignal(tuple)
@@ -153,54 +154,6 @@ class Worker(QtCore.QRunnable):
 
 
 
-# class IconProvider(QtWidgets.QFileIconProvider):
-#     def icon(self, fileInfo):
-#         if fileInfo.isDir():
-#             return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
-#             # return QtGui.QIcon.fromTheme("folder")
-#         if fileInfo.isFile():
-#             if fileInfo.suffix() in mimeTypes["video"]:
-#                 filePath = fileInfo.filePath()
-#                 fileName = fileInfo.fileName()
-#                 thumb_image = filesThumbsDir+fileName+".jpeg"
-#                 if os.path.exists(thumb_image):
-#                     return QtGui.QIcon(thumb_image)
-#                 else:
-#                     if fileName.startswith("."):
-#                         pass
-#                     else:
-#                         # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
-#                         return QtGui.QIcon.fromTheme("video-x-generic")
-#                 return QtGui.QIcon.fromTheme("video-x-generic")
-#
-#             if fileInfo.suffix() in mimeTypes["audio"]:
-#                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
-#                 return QtGui.QIcon.fromTheme("audio-x-generic")
-#
-#             if fileInfo.suffix() in mimeTypes["image"]:
-#                 filePath = fileInfo.filePath()
-#                 fileName = fileInfo.fileName()
-#                 thumb_image = filesThumbsDir + fileName + ".jpeg"
-#                 if os.path.exists(thumb_image):
-#                     return QtGui.QIcon(thumb_image)
-#                 else:
-#                     if fileName.startswith("."):
-#                         pass
-#                     else:
-#                         # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
-#                         return QtGui.QIcon.fromTheme("image-x-generic")
-#                 return QtGui.QIcon.fromTheme("image-x-generic")
-#
-#             if fileInfo.suffix() in mimeTypes["text"]:
-#                 # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
-#                 return QtGui.QIcon.fromTheme("text-x-generic")
-#
-#             return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "file.svg"))
-#             # return QtGui.QIcon.fromTheme("application-x-zerosize")
-#         return QtWidgets.QFileIconProvider.icon(self, fileInfo)
-
-
-
 class FSM(QtWidgets.QFileSystemModel):
 
     def __init__(self,**kwargs):
@@ -211,8 +164,8 @@ class FSM(QtWidgets.QFileSystemModel):
             fileInfo = self.fileInfo(index)
 
             if fileInfo.isDir():
-                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder.svg"))
-                return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-symbolic.svg")
+                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "folder.svg"))
+                # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-symbolic.svg")
                 # return QtGui.QIcon.fromTheme("folder")
             if fileInfo.isFile():
                 if fileInfo.suffix() in mimeTypes["video"]:
@@ -224,14 +177,17 @@ class FSM(QtWidgets.QFileSystemModel):
                         if fileName.startswith("."):
                             pass
                         else:
-                            return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
+                            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-video.svg"))
+                            # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
                             # return QtGui.QIcon.fromTheme("video-x-generic")
                     # return QtGui.QIcon.fromTheme("video-x-generic")
-                    return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
+                    return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-video.svg"))
+                    # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
 
                 if fileInfo.suffix() in mimeTypes["audio"]:
                     # return QtGui.QIcon.fromTheme("audio-x-generic")
-                    return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-music-symbolic.svg")
+                    return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-audio.svg"))
+                    # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-music-symbolic.svg")
 
                 if fileInfo.suffix() in mimeTypes["image"]:
                     fileName = fileInfo.fileName()
@@ -242,17 +198,20 @@ class FSM(QtWidgets.QFileSystemModel):
                         if fileName.startswith("."):
                             pass
                         else:
-                            return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
+                            return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-image.svg"))
+                            # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
                             # return QtGui.QIcon.fromTheme("image-x-generic")
                     # return QtGui.QIcon.fromTheme("image-x-generic")
-                    return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
+                    return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-image.svg"))
+                    # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
 
                 if fileInfo.suffix() in mimeTypes["text"]:
-                    return QtGui.QIcon("/usr/share/icons/elementary-xfce/mimes/symbolic/text-x-generic-symbolic.svg")
+                    return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-text.svg"))
+                    # return QtGui.QIcon("/usr/share/icons/elementary-xfce/mimes/symbolic/text-x-generic-symbolic.svg")
                     # return QtGui.QIcon.fromTheme("text-x-generic")
 
-                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "file.svg"))
-                return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-documents-symbolic.svg")
+                return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file.svg"))
+                # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-documents-symbolic.svg")
                 # return QtGui.QIcon.fromTheme("text-x-generic")
 
         return QFileSystemModel.data(self, index, role)
@@ -302,11 +261,6 @@ class filesWidget():
 
         modelDirs = self.setDir(ROOTDIRNEW)
 
-        self.openDir(homeDir)
-
-        self.initConfig()
-        self.loadFavourites()
-
         # ICONS
         self.homeIcon = os.path.join(projDir, "imageFiles", "icons", "home.svg")
         self.darkIcon = os.path.join(projDir, "imageFiles", "icons", "moon.svg")
@@ -327,7 +281,14 @@ class filesWidget():
         self.deleteIcon = os.path.join(projDir, "imageFiles", "icons", "delete.svg")
         self.newFolderIcon = os.path.join(projDir, "imageFiles", "icons", "new-folder.svg")
         self.addFavouritesIcon = os.path.join(projDir, "imageFiles", "icons", "add-favourites.svg")
-        self.detailsIcon = os.path.join(projDir, "imageFiles", "icons", "details.svg")
+        self.detailsIcon = os.path.join(projDir, "imageFiles", "icons", "info.svg")
+        self.helpIcon = os.path.join(projDir, "imageFiles", "icons", "help.svg")
+
+        self.homeGIcon = os.path.join(projDir, "imageFiles", "icons", "home-green.svg")
+        self.folderIcon = os.path.join(projDir, "imageFiles", "icons", "folder-other.svg")
+        self.serverIcon = os.path.join(projDir, "imageFiles", "icons", "server-green.svg")
+        self.downloadIcon = os.path.join(projDir, "imageFiles", "icons", "download-green.svg")
+        self.tempIcon = os.path.join(projDir, "imageFiles", "icons", "folder-temp-green.svg")
 
         # listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
         # self.listIcon = os.path.join(projDir, "imageFiles", "new_icons", "view_list.svg")
@@ -338,7 +299,7 @@ class filesWidget():
         # self.closeIcon = os.path.join(projDir, "imageFiles", "new_icons", "close.svg")
         # self.addIcon = os.path.join(projDir, "imageFiles", "new_icons", "add.svg")
         # self.removeIcon = os.path.join(projDir, "imageFiles", "new_icons", "remove.svg")
-        self.helpIcon = os.path.join(projDir, "imageFiles", "help-icon-1.png")
+        # self.helpIcon = os.path.join(projDir, "imageFiles", "help-icon-1.png")
         # self.copyIcon = os.path.join(projDir, "imageFiles", "new_icons", "copy.svg")
         # self.cutIcon = os.path.join(projDir, "imageFiles", "new_icons", "cut.svg")
         # self.pasteIcon = os.path.join(projDir, "imageFiles", "new_icons", "paste.svg")
@@ -348,6 +309,9 @@ class filesWidget():
         # self.deleteIcon = os.path.join(projDir, "imageFiles", "new_icons", "delete.svg")
         # self.detailsIcon = os.path.join(projDir, "imageFiles", "new_icons", "details.svg")
 
+        self.openDir(homeDir)
+        self.initConfig()
+        self.loadFavourites()
 
         # self.main_ui.tabWidget.tabBarDoubleClicked.connect(self.tab_open_doubleclick)
         # self.main_ui.tabWidget.customContextMenuRequested.connect(lambda x, context=self.main_ui.tabWidget.currentWidget().viewport(): self.popUpTabs(context, x))
@@ -586,15 +550,20 @@ class filesWidget():
             thumb.setText(key)
 
             if key == "Home":
-                thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "home.svg")))
+                # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "home.svg")))
+                thumb.setIcon(QtGui.QIcon(self.homeGIcon))
             elif key == "Downloads":
-                thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "downloads.svg")))
+                # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "downloads.svg")))
+                thumb.setIcon(QtGui.QIcon(self.downloadIcon))
             elif key == "Tmp":
-                thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "temp.svg")))
+                # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "temp.svg")))
+                thumb.setIcon(QtGui.QIcon(self.tempIcon))
             elif key == "Crap":
-                thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "crap.svg")))
+                # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "crap.svg")))
+                thumb.setIcon(QtGui.QIcon(self.serverIcon))
             else:
-                thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-other.svg")))
+                # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-other.svg")))
+                thumb.setIcon(QtGui.QIcon(self.folderIcon))
 
             thumb.setFocusPolicy(Qt.NoFocus)
 
@@ -617,7 +586,6 @@ class filesWidget():
             frame.setLayout(hLay)
 
             self.main_ui.favourites.setIndexWidget(item.index(), frame)
-
 
     def favouritesPopup(self,button,editor,entButt,pos):
         global places
