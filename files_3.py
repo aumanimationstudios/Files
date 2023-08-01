@@ -240,7 +240,7 @@ class filesWidget():
 
         self.main_ui = uic.loadUi(main_ui_file)
         self.main_ui.setWindowTitle("FILES")
-        self.main_ui.setWindowIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "folder.svg")))
+        self.main_ui.setWindowIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons" , "folder-main.svg")))
 
         sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
         self.main_ui.setStyleSheet(sS.read())
@@ -1102,36 +1102,75 @@ class filesWidget():
                                     debug.info("File already exists")
                                     self.messages("red", "File already exists")
                                 else:
-                                    pasteCmd = ""
-                                    rmDirCmd = ""
+                                    remove_source_files=False
                                     if cutFile:
-                                        pasteCmd = "rsync --remove-source-files -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
-                                        rmDirCmd = "rmdir \"{0}\" ".format(sourceFile)
-                                    else:
-                                        pasteCmd = "rsync -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
-                                    debug.info(pasteCmd)
+                                        remove_source_files=True
                                     self.messages("green", "Copying "+sourceFile)
-                                    p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
-                                    # for line in iter(p.stdout.readline, b''):
-                                    for line in p.stdout:
-                                        synData = (tuple(filter(None, line.strip().split(' '))))
-                                        if synData:
-                                            prctg = synData[1].split("%")[0]
-                                            debug.info(prctg)
-                                            self.main_ui.progressBar.show()
-                                            self.main_ui.progressBar.setValue(int(prctg))
-                                    subprocess.Popen(shlex.split("sync"))
-                                    if rmDirCmd:
+                                    self.main_ui.progressBar.show()
+                                    self.main_ui.progressBar.setValue(0)
+                                    file_copy_thread = rsyncThread(sourceFile, destPath, app, remove_source_files=remove_source_files)
+                                    file_copy_thread.progress_updated.connect(lambda x, source=sourceFile: self.update_progress(x, source))
+                                    # file_copy_thread.finished.connect(self.copy_finished)
+                                    file_copy_thread.finished.connect(lambda source=sourceFile, cutFile=cutFile: self.copy_finished(source,cutFile=cutFile))
+                                    file_copy_thread.start()
+
+                                    if cutFile:
+                                        rmDirCmd = "rmdir \"{0}\" ".format(sourceFile)
                                         try:
                                             subprocess.Popen(shlex.split(rmDirCmd))
                                         except:
                                             debug.info(str(sys.exc_info()))
+
+                                    # pasteCmd = ""
+                                    # rmDirCmd = ""
+                                    # if cutFile:
+                                    #     pasteCmd = "rsync --remove-source-files -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
+                                    #     rmDirCmd = "rmdir \"{0}\" ".format(sourceFile)
+                                    # else:
+                                    #     pasteCmd = "rsync -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
+                                    # debug.info(pasteCmd)
+                                    # self.messages("green", "Copying "+sourceFile)
+                                    # p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
+                                    # # for line in iter(p.stdout.readline, b''):
+                                    # for line in p.stdout:
+                                    #     synData = (tuple(filter(None, line.strip().split(' '))))
+                                    #     if synData:
+                                    #         prctg = synData[1].split("%")[0]
+                                    #         debug.info(prctg)
+                                    #         self.main_ui.progressBar.show()
+                                    #         self.main_ui.progressBar.setValue(int(prctg))
+                                    # subprocess.Popen(shlex.split("sync"))
+                                    # if rmDirCmd:
+                                    #     try:
+                                    #         subprocess.Popen(shlex.split(rmDirCmd))
+                                    #     except:
+                                    #         debug.info(str(sys.exc_info()))
                         else:
                             debug.info("Danger Zone: Can not paste")
                             debug.info("Error! No permission to paste.")
                             self.messages("red", "Error! No permission to paste.")
-                self.main_ui.progressBar.hide()
+                # self.main_ui.progressBar.hide()
                 # messages(self.main_ui, "white", "")
+            except:
+                debug.info(str(sys.exc_info()))
+
+
+    def update_progress(self, progress, source):
+        debug.info(progress)
+        self.main_ui.progressBar.show()
+        self.messages("green", "Copying "+source)
+        self.main_ui.progressBar.setValue(int(progress))
+
+
+    def copy_finished(self, source, cutFile=False):
+        self.main_ui.progressBar.hide()
+        subprocess.Popen(shlex.split("sync"))
+        self.messages("green", "Finished copying")
+
+        if cutFile:
+            rmDirCmd = "rmdir \"{0}\" ".format(source)
+            try:
+                subprocess.Popen(shlex.split(rmDirCmd))
             except:
                 debug.info(str(sys.exc_info()))
 
@@ -1540,48 +1579,39 @@ class filesWidget():
 
 
 
-# class rsyncThread(QThread):
-#     progress = pyqtSignal(float)
-#     finished = pyqtSignal(str)
-#
-#     def __init__(self, source, destination, parent):
-#         super(rsyncThread, self).__init__(parent)
-#         self.source = source
-#         self.destination = destination
-#
-#     def run(self):
-#         command = "rsync --archive --human-readable --info=progress2 %s %s" %(self.source, self.destination)
-#         process = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-#         total_size = None
-#
-#         while True:
-#             output = process.stdout.readline().strip()
-#             if output == '' and process.poll() is not None:
-#                 break
-#
-#             if output.startswith('  '):
-#                 items = output.split()
-#                 if len(items) >= 3 and items[0] == 'to-check=':
-#                     total_files = int(items[1])
-#                     total_size = int(items[2])
-#                 elif len(items) >= 3 and items[0] == 'total=':
-#                     total_bytes = int(items[1])
-#                     total_size = total_bytes
-#
-#             elif output.startswith('progress'):
-#                 items = output.split()
-#                 if len(items) >= 4 and items[1] == 'to-check=':
-#                     files_left = int(items[2])
-#                     bytes_left = int(items[3])
-#                     if total_size is not None:
-#                         progress = 100 - bytes_left / total_size * 100
-#                         self.progress.emit(progress)
-#
-#         output,error = process.communicate()
-#         if error:
-#             self.finished.emit("Error: %s" %error)
-#         else:
-#             self.finished.emit("Finished syncing files.")
+class rsyncThread(QThread):
+    progress_updated = pyqtSignal(int)
+    finished = pyqtSignal()
+
+    def __init__(self, source_path, destination_path, parent, remove_source_files=False):
+        super(rsyncThread, self).__init__(parent)
+        self.source_path = source_path
+        self.destination_path = destination_path
+        self.remove_source_files = remove_source_files
+
+    def run(self):
+        rsyncCommand = ""
+        if self.remove_source_files:
+            rsyncCommand = ["rsync", "--remove-source-files", "-azHXW", "--info=progress2", self.source_path, self.destination_path]
+        else:
+            rsyncCommand = ["rsync", "-azHXW", "--info=progress2", self.source_path, self.destination_path]
+        
+        process = subprocess.Popen(rsyncCommand,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
+        
+        for line in process.stdout:
+            synData = (tuple(filter(None, line.strip().split(' '))))
+            # print (synData)
+            if synData:
+                try:
+                    prctg = int(synData[1].split("%")[0])
+                    # print (prctg)
+                    self.progress_updated.emit(prctg)
+                except:
+                    debug.info(str(sys.exc_info()))
+        process.wait()
+
+        # Emit the finished signal
+        self.finished.emit()
 
 
 
