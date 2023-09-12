@@ -1572,7 +1572,10 @@ class filesWidget():
         for proc in currDownloads:
             try:
                 debug.info(proc.pid)
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                # os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                os.kill(proc.pid, signal.SIGTERM)
+                subprocess.run("killall aria2c", shell=True)
+                # TODO: Remove residuals from cancelled downloads
             except:
                 debug.info(str(sys.exc_info()))
         self.afterVideoDownload("Cancelled")
