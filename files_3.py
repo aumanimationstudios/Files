@@ -116,7 +116,7 @@ CUR_DIR_SELECTED = None
 
 cutFile = False
 
-currDownloads = []
+currDownloads = {}
 
 currIconFiles = None
 currListFiles = None
@@ -1569,13 +1569,28 @@ class filesWidget():
 
     def cancelVideoDownload(self):
         debug.info(currDownloads)
-        for proc in currDownloads:
+        for key, value in currDownloads.items():
             try:
-                debug.info(proc.pid)
+                debug.info(key)
                 # os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                os.kill(proc.pid, signal.SIGTERM)
+                os.kill(key, signal.SIGTERM)
                 subprocess.run("killall aria2c", shell=True)
+
                 # TODO: Remove residuals from cancelled downloads
+                debug.info(value)
+                downDir = os.sep.join(value.strip().split(os.sep)[:-1])
+                debug.info(downDir)
+                
+                # dirContents = os.listdir(downDir)
+                # debug.info(dirContents)
+                # for f in dirContents:
+                #     if '.part' in f:
+                #         debug.info(downDir+os.sep+f)
+                #         rmCmd = "rm -frv \"{0}\" ".format(downDir+os.sep+f)
+                #         try:
+                #             subprocess.Popen(shlex.split(rmCmd))
+                #         except:
+                #             debug.info(str(sys.exc_info()))
             except:
                 debug.info(str(sys.exc_info()))
         self.afterVideoDownload("Cancelled")
@@ -1640,7 +1655,8 @@ class downloadVideoThread(QThread):
             # msg = ""
 
             p = subprocess.Popen(shlex.split(downCmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            currDownloads.append(p)
+            # currDownloads.append(p)
+            currDownloads[p.pid] = self.path
             msg = ""
             for line in p.stdout:
                 if line:
