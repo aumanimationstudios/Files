@@ -6,10 +6,13 @@ __email__ = "sanathshetty111@gmail.com"
 
 
 mimeTypes = {
-    "image":["exr","hdr","jpeg","jpg","png","svg","tiff","tga","EXR","HDR","JPEG","JPG","PNG","SVG","TIFF","TGA"],
-    "video":["avi","gif","mkv","mov","mp4","webm","webp","AVI","GIF","MKV","MOV","MP4","WEBM","WEBP"],
+    "image":["exr","hdr","jpeg","jpg","png","svg","tiff","tga","EXR","HDR","JPEG","JPG","PNG","SVG","TIFF","TGA","webm","webp"],
+    "video":["avi","gif","mkv","mov","mp4","AVI","GIF","MKV","MOV","MP4","WEBM","WEBP"],
     "audio":["aac","flac","mp3","wav","AAC","FLAC","MP3","WAV"],
     "text": ["text","txt","log","TEXT","TXT","LOG"],
+    "pdf": ["pdf"],
+    "pureref": ["pureref"],
+    "blender": ["blend"],
 
     # "text":['txt','py','sh','text','json','conf','yml','log']
     # "blender":[".blend",".blend1",".blend2"],
@@ -36,7 +39,8 @@ mimeConvertCmds = {
 
 mimeTypesOpenCmds = {
 
-    "image": "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} \"{1}\" ",
+    # "image": "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} \"{1}\" ",
+    "image": "mirage {1} ",
     "video": "mpv --screenshot-directory=/tmp/ --input-conf={0} \"{1}\" ",
     "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showcqt=s=1024x512:r=60[vo]' \"{0}\" ",
     "text": "leafpad \"{0}\" ",
@@ -63,4 +67,27 @@ mimeTypesOpenCmds = {
     # "reel": {"linux":["mrViewer"]},
     # "pureref": {"linux":["pureref"]},
     # "edl": {"linux":["mrViewer"]},
+}
+
+mimeTypesOpenWithCmds = {
+    "image": {
+            "gwenview": "/usr/bin/gwenview \"{0}\" ",
+            "mirage" : "/usr/bin/mirage \"{0}\" "
+            },
+    "video": {
+            "mpv": "/usr/bin/mpv \"{0}\" ",
+            "djv_view": "/usr/bin/djv_view \"{0}\" "
+            },
+    "audio": {
+            "mpv": "/usr/bin/mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showcqt=s=1024x512:r=60[vo]' \"{0}\" "
+            },
+    "text": {
+            "leafpad": "/usr/bin/leafpad \"{0}\" "
+            },
+    "pdf": {
+            "pdfReader": "/usr/local/bin/pdfReader \"{0}\" "
+            },
+    "pureref" : {
+                "pureref": "/usr/local/bin/pureref \"{0}\" "
+                },
 }

@@ -24,6 +24,7 @@ import constants
 from constants import mimeTypes
 from constants import mimeConvertCmds
 from constants import mimeTypesOpenCmds
+from constants import mimeTypesOpenWithCmds
 import widgetProvider
 import argparse
 import glob
@@ -1007,7 +1008,31 @@ class filesWidget():
         menu = QtWidgets.QMenu()
         self.setStyle(menu)
 
-        # REMINDER : DO NOT ADD OPEN WITH ACTION
+        model,selectedIndexes,selectedFiles = self.getSelectedFiles()
+
+        openWithCmdActions = {}
+
+        if len(selectedFiles) == 1:
+            if os.path.isfile(selectedFiles[0]):
+                debug.info("Eligible for open with")
+                openAction = menu.addAction("Open")
+                openWithMenu = QtWidgets.QMenu("Open With")
+                self.setStyle(openWithMenu)
+                
+                fileName = str(model.fileName(selectedIndexes[0]))
+                suffix = pathlib.Path(fileName).suffix.split('.')[-1]
+                debug.info(suffix)
+                for fileType in mimeTypes.keys():
+                    if suffix in mimeTypes[fileType]:
+                        if fileType in mimeTypesOpenWithCmds.keys():
+                            mimeSofts = [i for i in mimeTypesOpenWithCmds[fileType].keys() ]
+                            debug.info(mimeSofts)
+                            for soft in mimeSofts:
+                                openWithCmdActions[openWithMenu.addAction(soft)] = mimeTypesOpenWithCmds[fileType][soft].format(selectedFiles[0])
+                
+                debug.info(openWithCmdActions)
+
+                menu.addMenu(openWithMenu)
 
         copyAction = menu.addAction(QtGui.QIcon(self.copyIcon),"Copy")
         cutAction = menu.addAction(QtGui.QIcon(self.cutIcon),"Cut")
@@ -1018,9 +1043,23 @@ class filesWidget():
         deleteAction = menu.addAction(QtGui.QIcon(self.deleteIcon),"Delete")
         detailsAction = menu.addAction(QtGui.QIcon(self.detailsIcon),"Details")
 
-        model,selectedIndexes,selectedFiles = self.getSelectedFiles()
         action = menu.exec_(context.mapToGlobal(pos))
 
+        try:
+            if (action == openAction):
+                if (selectedFiles):
+                    self.openFile()
+        except:
+            debug.info(str(sys.exc_info()))
+
+        try:
+            if (action in openWithCmdActions.keys()):
+                if (selectedFiles):
+                    runCmd = openWithCmdActions[action]
+                    debug.info(runCmd)
+                    subprocess.Popen(shlex.split(runCmd))
+        except:
+            debug.info(str(sys.exc_info()))
 
         if (action == copyAction):
             if (selectedFiles):
