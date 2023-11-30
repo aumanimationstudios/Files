@@ -1128,6 +1128,7 @@ class filesWidget():
                     destPath = os.path.abspath(destFolder)+"/"
                     # debug.info(destPath)
                     if destPath and os.path.exists(destPath):
+                        debug.info(destPath)
                         permitted = False
                         for x in pastePermittedDirs:
                             if x in destPath:
@@ -1653,18 +1654,21 @@ class rsyncThread(QThread):
         else:
             rsyncCommand = ["rsync", "-azHXW", "--info=progress2", self.source_path, self.destination_path]
         
+        debug.info(rsyncCommand)
         process = subprocess.Popen(rsyncCommand,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
         
         for line in process.stdout:
             synData = (tuple(filter(None, line.strip().split(' '))))
             # print (synData)
             if synData:
+                prctg = 0
                 try:
                     prctg = int(synData[1].split("%")[0])
                     # print (prctg)
-                    self.progress_updated.emit(prctg)
                 except:
                     debug.info(str(sys.exc_info()))
+                    prctg = 0
+                self.progress_updated.emit(prctg)
         process.wait()
 
         # Emit the finished signal
