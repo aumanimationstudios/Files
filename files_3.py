@@ -83,8 +83,8 @@ debug.info(main_ui_file)
 
 
 renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", homeDir]
-cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", homeDir]
-pastePermittedDirs = ["/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", homeDir] #REMINDER : Do NOT add bluepixels downloads folder
+cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
+pastePermittedDirs = ["/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir] #REMINDER : Do NOT add bluepixels downloads folder
 deletePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", homeDir]
 newFolderPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", homeDir]
 prohibitedDirs = ["/blueprod/STOR", "/proj", "/library","/aumbackup"]
