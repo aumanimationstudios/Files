@@ -82,11 +82,11 @@ main_ui_file = os.path.join(projDir, "files_3.ui")
 debug.info(main_ui_file)
 
 
-renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", homeDir]
+renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
 cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
 pastePermittedDirs = ["/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir] #REMINDER : Do NOT add bluepixels downloads folder
-deletePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", homeDir]
-newFolderPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", homeDir]
+deletePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
+newFolderPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
 prohibitedDirs = ["/blueprod/STOR", "/proj", "/library","/aumbackup"]
 
 parser = argparse.ArgumentParser(description="File viewer utility")
