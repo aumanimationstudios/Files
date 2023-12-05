@@ -914,7 +914,7 @@ class filesWidget():
                 self.openDir(ROOTDIRNEW)
                 self.messages("white", "")
             else:
-                self.messages("red","No such folder!")
+                self.messages("red","Folder not found!")
 
 
     def search(self):
