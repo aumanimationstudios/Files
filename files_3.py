@@ -47,6 +47,8 @@ import pathlib
 import json
 from PIL import Image
 from multiprocessing import Pool
+import binascii
+import hashlib
 
 from PyQt5 import QtCore, uic, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem, QWidget, QShortcut
@@ -76,7 +78,7 @@ if os.path.exists(filesThumbsDir):
         else:
             pass
 else:
-    os.mkdir(filesThumbsDir)
+    os.system("mkdir -p {0}".format(filesThumbsDir))
 
 main_ui_file = os.path.join(projDir, "files_3.ui")
 debug.info(main_ui_file)
@@ -93,12 +95,16 @@ parser = argparse.ArgumentParser(description="File viewer utility")
 parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder")
 args = parser.parse_args()
 
-confFile = homeDir+os.sep+".config"+os.sep+"files.json"
+favourites_conf_file = homeDir+os.sep+".config"+os.sep+"files_favourites.json"
+thumbs_conf_file = homeDir+os.sep+".config"+os.sep+"files_thumbs.json"
 
 places = {}
 places["Home"] = homeDir
 places["Crap"] = "/blueprod/CRAP/crap"
 places["Downloads"] = homeDir+os.sep+"Downloads"
+places["Temp_Stor2"] = "/TEMP_STOR2/temp_stor2"
+
+thumbs = {}
 
 openTabs = {}
 
@@ -171,20 +177,25 @@ class FSM(QtWidgets.QFileSystemModel):
             if fileInfo.isFile():
                 if fileInfo.suffix() in mimeTypes["video"]:
                     fileName = fileInfo.fileName()
-                    thumb_image = filesThumbsDir+fileName+".jpeg"
-                    if os.path.exists(thumb_image):
-                        return QtGui.QIcon(thumb_image)
-                    else:
-                        if fileName.startswith("."):
-                            pass
+                    filePath = fileInfo.filePath()
+                    debug.info(filePath)
+                    try:
+                        thumb_image = filesThumbsDir+thumbs[filePath]+".jpeg"
+                        if os.path.exists(thumb_image):
+                            return QtGui.QIcon(thumb_image)
                         else:
-                            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-video.svg"))
-                            # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
-                            return QtGui.QIcon.fromTheme("video-x-generic")
-                    return QtGui.QIcon.fromTheme("video-x-generic")
-                    # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-video.svg"))
-                    # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
-
+                            if fileName.startswith("."):
+                                pass
+                            else:
+                                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-video.svg"))
+                                # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
+                                return QtGui.QIcon.fromTheme("video-x-generic")
+                        return QtGui.QIcon.fromTheme("video-x-generic")
+                        # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-video.svg"))
+                        # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-videos-symbolic.svg")
+                    except:
+                        debug.info(str(sys.exc_info()))
+                        
                 if fileInfo.suffix() in mimeTypes["audio"]:
                     return QtGui.QIcon.fromTheme("audio-x-generic")
                     # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-audio.svg"))
@@ -192,20 +203,25 @@ class FSM(QtWidgets.QFileSystemModel):
 
                 if fileInfo.suffix() in mimeTypes["image"]:
                     fileName = fileInfo.fileName()
-                    thumb_image = filesThumbsDir + fileName + ".jpeg"
-                    if os.path.exists(thumb_image):
-                        return QtGui.QIcon(thumb_image)
-                    else:
-                        if fileName.startswith("."):
-                            pass
+                    filePath = fileInfo.filePath()
+                    debug.info(filePath)
+                    try:
+                        thumb_image = filesThumbsDir+thumbs[filePath]+".jpeg"
+                        if os.path.exists(thumb_image):
+                            return QtGui.QIcon(thumb_image)
                         else:
-                            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-image.svg"))
-                            # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
-                            return QtGui.QIcon.fromTheme("image-x-generic")
-                    return QtGui.QIcon.fromTheme("image-x-generic")
-                    # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-image.svg"))
-                    # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
-
+                            if fileName.startswith("."):
+                                pass
+                            else:
+                                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-image.svg"))
+                                # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
+                                return QtGui.QIcon.fromTheme("image-x-generic")
+                        return QtGui.QIcon.fromTheme("image-x-generic")
+                        # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-image.svg"))
+                        # return QtGui.QIcon("/usr/share/icons/elementary-xfce/places/symbolic/folder-pictures-symbolic.svg")
+                    except:
+                        debug.info(str(sys.exc_info()))
+                    
                 if fileInfo.suffix() in mimeTypes["text"]:
                     # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "file-text.svg"))
                     # return QtGui.QIcon("/usr/share/icons/elementary-xfce/mimes/symbolic/text-x-generic-symbolic.svg")
@@ -410,15 +426,25 @@ class filesWidget():
 
     def initConfig(self):
         global places
-        global confFile
+        global thumbs
+        global favourites_conf_file
+        global thumbs_conf_file
 
-        if os.path.exists(confFile):
-            f = open(confFile)
+        if os.path.exists(favourites_conf_file):
+            f = open(favourites_conf_file)
             data = json.load(f)
             places = data
         else:
-            with open(confFile, 'w') as conf_file:
+            with open(favourites_conf_file, 'w') as conf_file:
                 json.dump(places, conf_file, sort_keys=True, indent=4)
+
+        if os.path.exists(thumbs_conf_file):
+            f = open(thumbs_conf_file)
+            data = json.load(f)
+            thumbs = data
+        else:
+            with open(thumbs_conf_file, 'w') as conf_file:
+                json.dump(thumbs, conf_file, sort_keys=True, indent=4)
 
 
     def popUpTabs(self, pos):
@@ -612,7 +638,7 @@ class filesWidget():
 
         if action == remove:
             places.pop(currName)
-            with open(confFile, 'w') as conf_file:
+            with open(favourites_conf_file, 'w') as conf_file:
                 json.dump(places, conf_file, sort_keys=True, indent=4)
             self.initConfig()
             self.loadFavourites()
@@ -631,7 +657,7 @@ class filesWidget():
                 if key == currName:
                     places[newName] = value
                     places.pop(key)
-                    with open(confFile, 'w') as conf_file:
+                    with open(favourites_conf_file, 'w') as conf_file:
                         json.dump(places, conf_file, sort_keys=True, indent=4)
                     self.initConfig()
                     self.loadFavourites()
@@ -706,6 +732,7 @@ class filesWidget():
 
 
     def genThumb(self, dirPath, progress_callback):
+        global thumbs
         files = [f for f in os.listdir(dirPath) if os.path.isfile(os.path.join(dirPath, f))]
         for f in files:
             # debug.info(f)
@@ -721,7 +748,16 @@ class filesWidget():
                 # debug.info(ext)
 
                 if ext in mimeTypes["video"]:
-                    thumb_image = filesThumbsDir + f + ".jpeg"
+
+                    debug.info(file_path)
+                    # hex_file_path = binascii.hexlify(file_path.encode()).decode()
+                    hex_file_path = hashlib.sha256(file_path.encode()).hexdigest()
+                    debug.info(hex_file_path)
+                    thumbs[file_path] = hex_file_path
+                    # with open(thumbs_conf_file, 'w') as conf_file:
+                    #     json.dump(thumbs, conf_file, sort_keys=True, indent=4)
+
+                    thumb_image = filesThumbsDir + hex_file_path + ".jpeg"
                     if os.path.exists(thumb_image):
                         pass
                     else:
@@ -734,7 +770,16 @@ class filesWidget():
                             debug.info(str(sys.exc_info()))
 
                 if ext in mimeTypes["image"]:
-                    thumb_image = filesThumbsDir + f + ".jpeg"
+
+                    debug.info(file_path)
+                    # hex_file_path = binascii.hexlify(file_path.encode()).decode()
+                    hex_file_path = hashlib.sha256(file_path.encode()).hexdigest()
+                    debug.info(hex_file_path)
+                    thumbs[file_path] = hex_file_path
+                    # with open(thumbs_conf_file, 'w') as conf_file:
+                    #     json.dump(thumbs, conf_file, sort_keys=True, indent=4)
+
+                    thumb_image = filesThumbsDir + hex_file_path + ".jpeg"
                     if os.path.exists(thumb_image):
                         pass
                     else:
@@ -746,6 +791,9 @@ class filesWidget():
                             subprocess.call(shlex.split(genThumbCmd))
                         except:
                             debug.info(str(sys.exc_info()))
+                
+        with open(thumbs_conf_file, 'w') as conf_file:
+                json.dump(thumbs, conf_file, sort_keys=True, indent=4)
 
 
     def openListDir(self, dirPath):
@@ -1315,7 +1363,7 @@ class filesWidget():
                 filePath = os.path.abspath(str(model.filePath(index)))
                 if fileInfo.isDir():
                     places[fileName] = filePath
-                    with open(confFile, 'w') as conf_file:
+                    with open(favourites_conf_file, 'w') as conf_file:
                         json.dump(places, conf_file, sort_keys=True, indent=4)
                     self.initConfig()
                     self.loadFavourites()
