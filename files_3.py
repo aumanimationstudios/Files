@@ -167,7 +167,8 @@ class FSM(QtWidgets.QFileSystemModel):
         super(FSM, self).__init__(**kwargs)
 
     def data(self, index, role):
-        if role == Qt.DecorationRole and index.column() == 0:
+        QtGui.QIcon.setThemeName("elementary-xfce")
+        if role == QtCore.Qt.DecorationRole and index.column() == 0:
             fileInfo = self.fileInfo(index)
 
             if fileInfo.isDir():
