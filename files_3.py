@@ -162,12 +162,16 @@ class Worker(QtCore.QRunnable):
 
 
 class FSM(QtWidgets.QFileSystemModel):
+    icon_theme = subprocess.check_output(shlex.split("xfconf-query -lvc xsettings -p /Net/IconThemeName")).decode().split(" ")[-1].strip()
+    debug.info(icon_theme)
 
     def __init__(self,**kwargs):
         super(FSM, self).__init__(**kwargs)
 
     def data(self, index, role):
-        QtGui.QIcon.setThemeName("elementary-xfce")
+
+        QtGui.QIcon.setThemeName(self.icon_theme)
+
         if role == QtCore.Qt.DecorationRole and index.column() == 0:
             fileInfo = self.fileInfo(index)
 
