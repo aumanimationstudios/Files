@@ -162,8 +162,13 @@ class Worker(QtCore.QRunnable):
 
 
 class FSM(QtWidgets.QFileSystemModel):
-    icon_theme = subprocess.check_output(shlex.split("xfconf-query -lvc xsettings -p /Net/IconThemeName")).decode().split(" ")[-1].strip()
-    debug.info(icon_theme)
+    icon_theme = 'Adwaita'
+    try:
+        icon_theme = subprocess.check_output(shlex.split("xfconf-query -lvc xsettings -p /Net/IconThemeName")).decode().split(" ")[-1].strip()
+        debug.info(icon_theme)
+    except:
+        # icon_theme = subprocess.check_output(shlex.split("gsettings get org.gnome.desktop.interface icon-theme")).decode().strip()
+        debug.info(str(sys.exc_info()))
 
     def __init__(self,**kwargs):
         super(FSM, self).__init__(**kwargs)
