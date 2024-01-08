@@ -8,7 +8,7 @@ __email__ = "sanathshetty111@gmail.com"
 mimeTypes = {
     "image":["exr","hdr","jpeg","jpg","png","svg","tiff","tga","EXR","HDR","JPEG","JPG","PNG","SVG","TIFF","TGA","webm","webp"],
     "video":["avi","gif","mkv","mov","mp4","AVI","GIF","MKV","MOV","MP4","WEBM","WEBP"],
-    "audio":["aac","flac","mp3","wav","AAC","FLAC","MP3","WAV"],
+    "audio":["aac","flac","mp3","wav","AAC","FLAC","MP3","WAV","m4a","M4A"],
     "text": ["text","txt","log","TEXT","TXT","LOG"],
     "pdf": ["pdf"],
     "pureref": ["pureref"],
