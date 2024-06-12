@@ -26,7 +26,7 @@ mimeTypes = {
 }
 
 mimeConvertCmds = {
-    "image": "/usr/bin/convert \"{0}\" -sample 96x96 \"{1}\"",
+    "image": "/usr/bin/magick \"{0}\" -sample 96x96 \"{1}\"",
     "video": "/usr/bin/ffmpeg -loglevel panic -i \"{0}\" -vframes 1 -an -vf scale=96:-1 -ss 0.1 -y \"{1}\""
 
     # "pdf": "/usr/bin/convert \"{0}\"[0] -sample 96x96 -alpha remove \"{1}\"",

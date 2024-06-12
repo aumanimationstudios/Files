@@ -5,53 +5,55 @@ __license__ = "GPL"
 __email__ = "sanathshetty111@gmail.com"
 
 
-import sys
-import os
-from PyQt5.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem
-from PyQt5 import QtCore, uic, QtGui, QtWidgets
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
+from PySide6 import QtCore, QtUiTools, QtGui, QtWidgets
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem, QWidget
+from PySide6.QtGui import QKeySequence
+from PySide6.QtCore import QObject, QThread, Signal, Slot, Qt
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
 
 
-def iconFiles():
-    iconFiles = QtWidgets.QListView()
-    iconFiles.setFocusPolicy(Qt.NoFocus)
-    iconFiles.setContextMenuPolicy(Qt.CustomContextMenu)
-    iconFiles.setDragEnabled(False)
-    iconFiles.setDragDropMode(QAbstractItemView.NoDragDrop)
-    iconFiles.setDefaultDropAction(Qt.IgnoreAction)
-    iconFiles.setSelectionMode(QAbstractItemView.ExtendedSelection)
-    iconFiles.setIconSize(QSize(128,128))
-    iconFiles.setTextElideMode(Qt.ElideRight)
+def icon_files_widget():
+    icon_files = QtWidgets.QListView()
+    icon_files.setFocusPolicy(Qt.NoFocus)
+    icon_files.setContextMenuPolicy(Qt.CustomContextMenu)
+    icon_files.setDragEnabled(False)
+    icon_files.setDragDropMode(QAbstractItemView.NoDragDrop)
+    icon_files.setDefaultDropAction(Qt.IgnoreAction)
+    icon_files.setSelectionMode(QAbstractItemView.ExtendedSelection)
+    icon_files.setIconSize(QSize(128,128))
+    icon_files.setTextElideMode(Qt.ElideRight)
     # iconFiles.setMovement(QListView.Static)
-    iconFiles.setFlow(QListView.LeftToRight)
-    iconFiles.setWrapping(True)
-    iconFiles.setResizeMode(QListView.Adjust)
+    icon_files.setFlow(QListView.LeftToRight)
+    icon_files.setWrapping(True)
+    icon_files.setResizeMode(QListView.Adjust)
     # iconFiles.setLayoutMode(QListView.SinglePass)
-    iconFiles.setGridSize(QSize(200,200))
-    iconFiles.setViewMode(QListView.IconMode)
+    icon_files.setGridSize(QSize(200,200))
+    icon_files.setViewMode(QListView.IconMode)
     # iconFiles.setModelColumn(0)
     # iconFiles.setUniformItemSizes(False)
-    iconFiles.setWordWrap(True)
-    return iconFiles
+    icon_files.setWordWrap(True)
+    return icon_files
 
 
-def listFiles():
-    listFiles = QtWidgets.QTreeView()
-    listFiles.setFocusPolicy(Qt.NoFocus)
-    listFiles.setContextMenuPolicy(Qt.CustomContextMenu)
-    listFiles.setDragEnabled(False)
-    listFiles.setDragDropMode(QAbstractItemView.NoDragDrop)
-    listFiles.setDefaultDropAction(Qt.IgnoreAction)
-    listFiles.setSelectionMode(QAbstractItemView.ExtendedSelection)
-    listFiles.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-    listFiles.setRootIsDecorated(False)
-    listFiles.setUniformRowHeights(True)
-    listFiles.setItemsExpandable(False)
-    listFiles.setSortingEnabled(True)
+def list_files_widget():
+    list_files = QtWidgets.QTreeView()
+    list_files.setFocusPolicy(Qt.NoFocus)
+    list_files.setContextMenuPolicy(Qt.CustomContextMenu)
+    list_files.setDragEnabled(False)
+    list_files.setDragDropMode(QAbstractItemView.NoDragDrop)
+    list_files.setDefaultDropAction(Qt.IgnoreAction)
+    list_files.setSelectionMode(QAbstractItemView.ExtendedSelection)
+    list_files.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+    list_files.setRootIsDecorated(False)
+    list_files.setUniformRowHeights(True)
+    list_files.setItemsExpandable(False)
+    list_files.setSortingEnabled(True)
     # listFiles.setWordWrap(False)
-    listFiles.setExpandsOnDoubleClick(False)
-    listFiles.sortByColumn(0, Qt.AscendingOrder)
-    listFiles.setColumnWidth(0, 400)
-    return listFiles
+    list_files.setExpandsOnDoubleClick(False)
+    list_files.sortByColumn(0, Qt.AscendingOrder)
+    list_files.setColumnWidth(0, 400)
+    return list_files
+
