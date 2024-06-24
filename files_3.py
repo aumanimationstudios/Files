@@ -38,7 +38,7 @@ import threading
 import traceback
 import pathlib
 import json
-from PIL import Image
+# from PIL import Image
 from multiprocessing import Pool
 import binascii
 import hashlib
