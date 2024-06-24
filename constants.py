@@ -40,11 +40,11 @@ mimeConvertCmds = {
 mimeTypesOpenCmds = {
 
     # "image": "mpv --geometry=1920x1080 --image-display-duration=inf --loop-file=inf --input-conf={0} \"{1}\" ",
-    "image": "mirage {1} ",
+    "image": "ristretto \"{1}\" ",
     "video": "mpv --screenshot-directory=/tmp/ --input-conf={0} \"{1}\" ",
     "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showcqt=s=1024x512:r=60[vo]' \"{0}\" ",
-    "text": "leafpad \"{0}\" ",
-    "pdf": "pdfReader \"{0}\" ",
+    "text": "mousepad \"{0}\" ",
+    "pdf": "atril \"{0}\" ",
     "pureref" : "pureref \"{0}\" "
 
     # "image": "pqiv -i -t -l --browse --max-depth=1 \"{1}\" ",
@@ -71,21 +71,21 @@ mimeTypesOpenCmds = {
 
 mimeTypesOpenWithCmds = {
     "image": {
-            "gwenview": "/usr/bin/gwenview \"{0}\" ",
-            "mirage" : "/usr/bin/mirage \"{0}\" "
+            "ristretto": "/usr/bin/ristretto \"{0}\" "
             },
     "video": {
             "mpv": "/usr/bin/mpv \"{0}\" ",
-            "djv_view": "/usr/bin/djv_view \"{0}\" "
+            "djv_view": "/usr/local/bin/djv_view \"{0}\" ",
+            "djv_view_v2": "/usr/local/bin/djv_view_v2 \"{0}\" "
             },
     "audio": {
             "mpv": "/usr/bin/mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showcqt=s=1024x512:r=60[vo]' \"{0}\" "
             },
     "text": {
-            "leafpad": "/usr/bin/leafpad \"{0}\" "
+            "mousepad": "/usr/bin/mousepad \"{0}\" "
             },
     "pdf": {
-            "pdfReader": "/usr/local/bin/pdfReader \"{0}\" "
+            "atril": "/usr/bin/atril \"{0}\" "
             },
     "pureref" : {
                 "pureref": "/usr/local/bin/pureref \"{0}\" "
