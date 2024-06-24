@@ -6,9 +6,9 @@ __email__ = "sanathshetty111@gmail.com"
 
 
 mimeTypes = {
-    "image":["exr","hdr","jpeg","jpg","png","svg","tiff","tga","EXR","HDR","JPEG","JPG","PNG","SVG","TIFF","TGA","webm","webp"],
-    "video":["avi","gif","mkv","mov","mp4","AVI","GIF","MKV","MOV","MP4","WEBM","WEBP"],
-    "audio":["aac","flac","mp3","wav","AAC","FLAC","MP3","WAV","m4a","M4A"],
+    "image": ["exr","hdr","jpeg","jpg","png","svg","tiff","tga","EXR","HDR","JPEG","JPG","PNG","SVG","TIFF","TGA","webm","webp"],
+    "video": ["avi","gif","mkv","mov","mp4","AVI","GIF","MKV","MOV","MP4","WEBM","WEBP"],
+    "audio": ["aac","flac","mp3","wav","AAC","FLAC","MP3","WAV","m4a","M4A"],
     "text": ["text","txt","log","TEXT","TXT","LOG"],
     "pdf": ["pdf"],
     "pureref": ["pureref"],
@@ -71,7 +71,9 @@ mimeTypesOpenCmds = {
 
 mimeTypesOpenWithCmds = {
     "image": {
-            "ristretto": "/usr/bin/ristretto \"{0}\" "
+            "ristretto": "/usr/bin/ristretto \"{0}\" ",
+            "djv_view": "/usr/local/bin/djv_view \"{0}\" ",
+            "djv_view_v2": "/usr/local/bin/djv_view_v2 \"{0}\" "
             },
     "video": {
             "mpv": "/usr/bin/mpv \"{0}\" ",
@@ -87,7 +89,7 @@ mimeTypesOpenWithCmds = {
     "pdf": {
             "atril": "/usr/bin/atril \"{0}\" "
             },
-    "pureref" : {
+    "pureref": {
                 "pureref": "/usr/local/bin/pureref \"{0}\" "
                 },
 }
