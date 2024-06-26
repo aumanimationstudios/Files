@@ -1115,7 +1115,7 @@ def create_new_folder(main_ui):
         create_button.setShortcut(QtGui.QKeySequence("Return"))
         cancel_button.setShortcut(QtGui.QKeySequence("Escape"))
         create_button.clicked.connect(lambda f, mu=main_ui, line=name_line: add_folder(mu, line))
-        cancel_button.clicked.connect(clear_info_frame)
+        cancel_button.clicked.connect(lambda c, mu=main_ui: clear_info_frame(mu))
     else:
         debug.info("Danger Zone: Can not create new folder")
         debug.info("Error! No permission to create new folder.")
@@ -1242,7 +1242,7 @@ def rename_ui(main_ui):
             rename_button.setShortcut(QtGui.QKeySequence("Return"))
             cancel_button.setShortcut(QtGui.QKeySequence("Escape"))
             rename_button.clicked.connect(lambda r, mu=main_ui, line=name_line, path=current_dir, name=key: rename_new(mu, line, path, name))
-            cancel_button.clicked.connect(clear_info_frame)
+            cancel_button.clicked.connect(lambda c, mu=main_ui: clear_info_frame(mu))
 
 
 def rename_new(main_ui, line, path, name):
@@ -1347,7 +1347,7 @@ def show_details(main_ui):
 
     dets_cmd = ['du', '-sch']
     for file in selected_files:
-        dets_cmd = dets_cmd + [file]
+        dets_cmd = dets_cmd + ["\""+file+"\""]
     debug.info(dets_cmd)
 
     dets_field.append("<b>Items : </b>" + str(len(selected_files)+len(dets_cmd)-2))
@@ -1402,6 +1402,13 @@ def messages(main_ui, color, msg):
 
 def go_home(main_ui):
     open_dir(main_ui, dir_path=homeDir)
+
+
+def show_video_downloader(mu):
+    if not mu.toolBox.isVisible():
+        mu.toolBox.show()
+    else:
+        mu.toolBox.hide()
 
 
 def audio_restart():
@@ -1687,18 +1694,17 @@ class GetSizeThread(QThread):
         # finally:
         #     self.finished.emit()
         try:
-            # Use Qt process management for potential cross-platform compatibility
-            process = QtCore.QProcess()
-            process.setStandardOutputProcess(QtCore.QProcess.StandardOutputHandle.ReadChannel)
-            process.start(self.cmd)
-            process.waitForFinished()
+            process = Popen(shlex.split(" ".join(self.cmd)), stdout=PIPE, stderr=STDOUT, bufsize=1,
+                            universal_newlines=True)
+            output, _ = process.communicate()
 
-            # Read output efficiently in chunks
-            output = process.readAllStandardOutput().decode('utf-8')
-            size = output.split("\t")[-2].split("\n")[1]
+            # Process the output to get the size
+            size_line = output.strip().split("\n")[-1]  # Get the last line which contains the total size
+            size = size_line.split("\t")[0]  # Assuming the size is the first part of the line
+
             self.result.emit(size)
         except Exception as e:
-            debug.info(f"Error getting size: {e}")  # Informative error handling
+            debug.info(f"Error getting size: {e}")
         finally:
             self.finished.emit()
 
@@ -1779,6 +1785,8 @@ def files_window(main_ui):
     main_ui.changeDirButt.clicked.connect(lambda x, mu=main_ui: change_dir(mu))
     main_ui.searchButt.clicked.connect(lambda x, mu=main_ui: search(mu))
 
+    main_ui.toolBox.hide()
+    main_ui.videoDownloaderButt.clicked.connect(lambda x, mu=main_ui: show_video_downloader(mu))
     main_ui.audioRestartButt.clicked.connect(lambda x: audio_restart())
     main_ui.fixPenDisplayButt.clicked.connect(lambda x: fix_pen_display())
     main_ui.blenderMediaViewerButt.clicked.connect(lambda x: blender_media_viewer())
