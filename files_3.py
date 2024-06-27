@@ -94,8 +94,7 @@ args = parser.parse_args()
 favourites_conf_file = homeDir+os.sep+".config"+os.sep+"files_favourites.json"
 thumbs_conf_file = homeDir+os.sep+".config"+os.sep+"files_thumbs.json"
 
-places = {"Home": homeDir, "Crap": "/blueprod/CRAP/crap", "Downloads": homeDir + os.sep + "Downloads",
-          "Temp_Stor2": "/TEMP_STOR2/temp_stor2"}
+places = {"Home": homeDir, "Crap": "/blueprod/CRAP/crap", "Downloads": homeDir + os.sep + "Downloads"}
 
 thumbs = {}
 
