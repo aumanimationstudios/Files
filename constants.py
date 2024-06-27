@@ -6,23 +6,17 @@ __email__ = "sanathshetty111@gmail.com"
 
 
 mimeTypes = {
-    "image": ["exr","hdr","jpeg","jpg","png","svg","tiff","tga","EXR","HDR","JPEG","JPG","PNG","SVG","TIFF","TGA","webm","webp"],
-    "video": ["avi","gif","mkv","mov","mp4","AVI","GIF","MKV","MOV","MP4","WEBM","WEBP"],
+    "image": ["exr","hdr","jpeg","jpg","png","svg","tiff","tga","EXR","HDR","JPEG","JPG","PNG","SVG","TIFF","TGA","WEBM","WEBP","webm","webp"],
+    "video": ["avi","gif","mkv","mov","mp4","AVI","GIF","MKV","MOV","MP4","WEBM","WEBP","webm","webp"],
     "audio": ["aac","flac","mp3","wav","AAC","FLAC","MP3","WAV","m4a","M4A"],
     "text": ["text","txt","log","TEXT","TXT","LOG"],
     "pdf": ["pdf"],
-    "pureref": ["pureref"],
-    "blender": ["blend"],
+    "pureref": ["pureref","pur"],
 
-    # "text":['txt','py','sh','text','json','conf','yml','log']
-    # "blender":[".blend",".blend1",".blend2"],
+    # "blender": ["blend"],
     # "office":[".ods",".doc",".xls",".xlsx",".txt",".docx"],
     # "krita":[".kra"],
     # "psd":[".psd"],
-    # "pdf":[".pdf"],
-    # "reel":[".reel"],
-    # "pureref":[".pur"],
-    # "edl":[".reel"]
 }
 
 mimeConvertCmds = {
@@ -71,6 +65,7 @@ mimeTypesOpenCmds = {
 
 mimeTypesOpenWithCmds = {
     "image": {
+            "gwenview": "/usr/bin/gwenview \"{0}\" ",
             "ristretto": "/usr/bin/ristretto \"{0}\" ",
             "djv_view": "/usr/local/bin/djv_view \"{0}\" ",
             "djv_view_v2": "/usr/local/bin/djv_view_v2 \"{0}\" "

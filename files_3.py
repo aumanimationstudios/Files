@@ -78,6 +78,7 @@ else:
 main_ui_file = os.path.join(projDir, "files_3.ui")
 debug.info(main_ui_file)
 
+style_sheet_path = os.path.join(projDir, "styleSheets", "style.qss")
 
 renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
 cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
@@ -151,39 +152,39 @@ download_icon = os.path.join(projDir, "imageFiles", "icons", "download-green.svg
 temp_icon = os.path.join(projDir, "imageFiles", "icons", "folder-temp-green.svg")
 
 
-class WorkerSignals(QObject):
-    finished = Signal()
-    error = Signal(tuple)
-    result = Signal(object)
-    progress = Signal(int)
-
-
-class Worker(QThread):
-    def __init__(self, fn, *args, **kwargs):
-        super().__init__()
-        self.fn = fn
-        self.args = args
-        self.kwargs = kwargs
-        self.signals = WorkerSignals()
-        self.kwargs['progress_callback'] = self.signals.progress.emit
-
-    @Slot()
-    def run(self):
-        try:
-            result = self.fn(*self.args, **self.kwargs)
-        except Exception as e:
-            self.signals.error.emit((type(e), e, traceback.format_exc()))
-            # traceback.print_exc()
-            # exctype, value = sys.exc_info()[:2]
-            # self.signals.error.emit((exctype, value, traceback.format_exc()))
-        else:
-            self.signals.result.emit(result)
-        finally:
-            self.signals.finished.emit()
+# class WorkerSignals(QObject):
+#     finished = Signal()
+#     error = Signal(tuple)
+#     result = Signal(object)
+#     progress = Signal(int)
+#
+#
+# class Worker(QThread):
+#     def __init__(self, fn, *args, **kwargs):
+#         super().__init__()
+#         self.fn = fn
+#         self.args = args
+#         self.kwargs = kwargs
+#         self.signals = WorkerSignals()
+#         self.kwargs['progress_callback'] = self.signals.progress.emit
+#
+#     @Slot()
+#     def run(self):
+#         try:
+#             result = self.fn(*self.args, **self.kwargs)
+#         except Exception as e:
+#             self.signals.error.emit((type(e), e, traceback.format_exc()))
+#             # traceback.print_exc()
+#             # exctype, value = sys.exc_info()[:2]
+#             # self.signals.error.emit((exctype, value, traceback.format_exc()))
+#         else:
+#             self.signals.result.emit(result)
+#         finally:
+#             self.signals.finished.emit()
 
 
 class FSM(QtWidgets.QFileSystemModel):
-    icon_theme = 'Adwaita'
+    icon_theme = ""
     try:
         icon_theme = subprocess.check_output(shlex.split("xfconf-query -lvc xsettings -p /Net/IconThemeName")).decode().split(" ")[-1].strip()
         debug.info(icon_theme)
@@ -194,7 +195,8 @@ class FSM(QtWidgets.QFileSystemModel):
 
     def __init__(self,**kwargs):
         super(FSM, self).__init__(**kwargs)
-        QtGui.QIcon.setThemeName(self.icon_theme)
+        if self.icon_theme:
+            QtGui.QIcon.setThemeName(self.icon_theme)
         self.icon_cache = {
             "folder": QtGui.QIcon.fromTheme("folder"),
             "video": QtGui.QIcon.fromTheme("video-x-generic"),
@@ -425,7 +427,7 @@ def load_favourites(main_ui):
             thumb.setIcon(QtGui.QIcon(folder_icon))
 
         thumb.setFocusPolicy(Qt.NoFocus)
-
+        thumb.setStyleSheet(''' QPushButton { text-align: left; } ''')
         # thumb.setStyleSheet(''' QPushButton { text-align: left; border-style: transparent; padding-left: 8px; }
         #                                     QPushButton:hover { border: 1px solid #3daee9; } ''')
 
@@ -1363,7 +1365,7 @@ def set_size(text_edit, size):
 
 def messages(main_ui, color, msg):
     # main_ui.messages.setStyleSheet("color: %s" %color)
-    main_ui.messages.setText("%s" %msg)
+    main_ui.messages.setText(f"{msg}")
 
 
 # def setStyle(self,ui):
@@ -1405,10 +1407,10 @@ def go_home(main_ui):
 
 
 def show_video_downloader(mu):
-    if not mu.toolBox.isVisible():
-        mu.toolBox.show()
+    if not mu.videoDownloaderFrame.isVisible():
+        mu.videoDownloaderFrame.show()
     else:
-        mu.toolBox.hide()
+        mu.videoDownloaderFrame.hide()
 
 
 def audio_restart():
@@ -1634,8 +1636,8 @@ class DownloadVideoThread(QThread):
                     debug.info(line)
                     if "Unable to download webpage" in line:
                         msg = "Unable to download video"
-                    elif "already been downloaded and merged" in line:
-                        msg = "Already been downloaded and merged"
+                    elif "already been downloaded" in line:
+                        msg = "Already been downloaded"
                     elif "100%" in line:
                         msg = "Video Downloaded"
                     elif "Unsupported URL" in line:
@@ -1653,12 +1655,12 @@ class DownloadVideoThread(QThread):
                         if sync_data:
                             percent = sync_data[1].split("%")[0].strip()
                             self.progress.emit(int(percent))
-
                     elif "Deleting original file" in line:
                         self.result.emit("Download finished")
                         self.finished.emit()
-                        del currDownloads[p.p.pid]
-
+                        del currDownloads[p.pid]
+                    else:
+                        msg = "Failed"
             if p.returncode == 0:
                 self.result.emit("Download finished")
                 self.finished.emit()
@@ -1726,6 +1728,10 @@ def files_window(main_ui):
     # sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
     # main_ui.setStyleSheet(sS.read())
     # sS.close()
+
+    with open(style_sheet_path, "r") as sS:
+        main_ui.setStyleSheet(sS.read())
+
     # os.environ['FILES_THEME'] = "dark"
 
     # currIconFiles = main_ui.iconFiles
@@ -1785,7 +1791,7 @@ def files_window(main_ui):
     main_ui.changeDirButt.clicked.connect(lambda x, mu=main_ui: change_dir(mu))
     main_ui.searchButt.clicked.connect(lambda x, mu=main_ui: search(mu))
 
-    main_ui.toolBox.hide()
+    main_ui.videoDownloaderFrame.hide()
     main_ui.videoDownloaderButt.clicked.connect(lambda x, mu=main_ui: show_video_downloader(mu))
     main_ui.audioRestartButt.clicked.connect(lambda x: audio_restart())
     main_ui.fixPenDisplayButt.clicked.connect(lambda x: fix_pen_display())
