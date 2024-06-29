@@ -160,37 +160,6 @@ download_icon = os.path.join(projDir, "imageFiles", "icons", "download-green.svg
 temp_icon = os.path.join(projDir, "imageFiles", "icons", "folder-temp-green.svg")
 
 
-# class WorkerSignals(QObject):
-#     finished = Signal()
-#     error = Signal(tuple)
-#     result = Signal(object)
-#     progress = Signal(int)
-#
-#
-# class Worker(QThread):
-#     def __init__(self, fn, *args, **kwargs):
-#         super().__init__()
-#         self.fn = fn
-#         self.args = args
-#         self.kwargs = kwargs
-#         self.signals = WorkerSignals()
-#         self.kwargs['progress_callback'] = self.signals.progress.emit
-#
-#     @Slot()
-#     def run(self):
-#         try:
-#             result = self.fn(*self.args, **self.kwargs)
-#         except Exception as e:
-#             self.signals.error.emit((type(e), e, traceback.format_exc()))
-#             # traceback.print_exc()
-#             # exctype, value = sys.exc_info()[:2]
-#             # self.signals.error.emit((exctype, value, traceback.format_exc()))
-#         else:
-#             self.signals.result.emit(result)
-#         finally:
-#             self.signals.finished.emit()
-
-
 class FSM(QtWidgets.QFileSystemModel):
     icon_theme = ""
     try:
@@ -250,7 +219,7 @@ class FSM(QtWidgets.QFileSystemModel):
             elif not file_name.startswith("."):
                 return self.icon_cache[file_type]
         except Exception as e:
-            debug.info(f"Error generating thumbnail for {file_abs_path}: {str(e)}")
+            debug.info(f"Error getting thumbnail for {file_abs_path}: {str(e)}")
 
         return self.icon_cache[file_type]
 
@@ -272,21 +241,17 @@ def init_config():
     global favourites_conf_file
     global thumbs_conf_file
 
-    if os.path.exists(favourites_conf_file):
-        f = open(favourites_conf_file)
-        data = json.load(f)
-        places = data
-    else:
-        with open(favourites_conf_file, 'w') as conf_file:
-            json.dump(places, conf_file, sort_keys=True, indent=4)
+    def load_config(conf_file_path, default_data):
+        if os.path.exists(conf_file_path):
+            with open(conf_file_path, 'r') as cf:
+                return json.load(cf)
+        else:
+            with open(conf_file_path, 'w') as cf:
+                json.dump(default_data, cf, sort_keys=True, indent=4)
+            return default_data
 
-    if os.path.exists(thumbs_conf_file):
-        f = open(thumbs_conf_file)
-        data = json.load(f)
-        thumbs = data
-    else:
-        with open(thumbs_conf_file, 'w') as conf_file:
-            json.dump(thumbs, conf_file, sort_keys=True, indent=4)
+    places = load_config(favourites_conf_file, places)
+    thumbs = load_config(thumbs_conf_file, thumbs)
 
 
 def tabs_popup(main_ui, pos):
@@ -581,71 +546,6 @@ def open_dir(main_ui, dir_path=""):
     gen_thumb_thread.finished.connect(thumb_gen_finished)
     threads.append(gen_thumb_thread)
     gen_thumb_thread.start()
-
-
-# def gen_thumb(dir_path=""):
-#     global thumbs
-#     all_files = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
-#     for f in all_files:
-#         # debug.info(f)
-#         if f.startswith("."):
-#             pass
-#         else:
-#             file_abs_path = os.path.join(dir_path, f)
-#             file_extension = os.path.splitext(file_abs_path)[1]
-#             # debug.info(file_extension)
-#
-#             # ext = file_extension.split(".")[1]
-#             ext = file_extension.replace(".", "").strip()
-#             # debug.info(ext)
-#
-#             if ext in mimeTypes["video"]:
-#
-#                 debug.info(file_abs_path)
-#                 # hex_file_path = binascii.hexlify(file_abs_path.encode()).decode()
-#                 hex_file_path = hashlib.sha256(file_abs_path.encode()).hexdigest()
-#                 debug.info(hex_file_path)
-#                 thumbs[file_abs_path] = hex_file_path
-#                 # with open(thumbs_conf_file, 'w') as conf_file:
-#                 #     json.dump(thumbs, conf_file, sort_keys=True, indent=4)
-#
-#                 thumb_image = filesThumbsDir + hex_file_path + ".jpeg"
-#                 if os.path.exists(thumb_image):
-#                     pass
-#                 else:
-#                     try:
-#                         # genThumbCmd = "ffmpeg -ss 00:00:01.000 -i \"{0}\" -vf 'scale=128:128:force_original_aspect_ratio=decrease' -vframes 1 \"{1}\" -y ".format(
-#                         #               file_abs_path, thumb_image)
-#                         gen_thumb_cmd = mimeConvertCmds["video"].format(file_abs_path, thumb_image)
-#                         subprocess.call(shlex.split(gen_thumb_cmd))
-#                     except:
-#                         debug.info(str(sys.exc_info()))
-#
-#             if ext in mimeTypes["image"]:
-#
-#                 debug.info(file_abs_path)
-#                 # hex_file_path = binascii.hexlify(file_abs_path.encode()).decode()
-#                 hex_file_path = hashlib.sha256(file_abs_path.encode()).hexdigest()
-#                 debug.info(hex_file_path)
-#                 thumbs[file_abs_path] = hex_file_path
-#                 # with open(thumbs_conf_file, 'w') as conf_file:
-#                 #     json.dump(thumbs, conf_file, sort_keys=True, indent=4)
-#
-#                 thumb_image = filesThumbsDir + hex_file_path + ".jpeg"
-#                 if os.path.exists(thumb_image):
-#                     pass
-#                 else:
-#                     try:
-#                         # im = Image.open(file_abs_path)
-#                         # im.thumbnail((128,128))
-#                         # im.save(thumb_image)
-#                         gen_thumb_cmd = mimeConvertCmds["image"].format(file_abs_path, thumb_image)
-#                         subprocess.call(shlex.split(gen_thumb_cmd))
-#                     except:
-#                         debug.info(str(sys.exc_info()))
-#
-#     with open(thumbs_conf_file, 'w') as conf_file:
-#         json.dump(thumbs, conf_file, sort_keys=True, indent=4)
 
 
 def open_list_dir(main_ui, dir_path=""):
@@ -1586,46 +1486,6 @@ class GenThumbThread(QThread):
         else:
             debug.info("Thread stopped before completion.")
 
-        #     else:
-        #         file_abs_path = os.path.join(self.dir_path, f)
-        #         file_extension = os.path.splitext(file_abs_path)[1]
-        #         ext = file_extension.replace(".", "").strip()
-        #
-        #         if ext in mimeTypes["video"]:
-        #             debug.info(file_abs_path)
-        #             hex_file_path = hashlib.sha256(file_abs_path.encode()).hexdigest()
-        #             debug.info(hex_file_path)
-        #             self.thumbs[file_abs_path] = hex_file_path
-        #             thumb_image = filesThumbsDir + hex_file_path + ".jpeg"
-        #             if os.path.exists(thumb_image):
-        #                 pass
-        #             else:
-        #                 try:
-        #                     gen_thumb_cmd = mimeConvertCmds["video"].format(file_abs_path, thumb_image)
-        #                     subprocess.call(shlex.split(gen_thumb_cmd))
-        #                 except:
-        #                     debug.info(str(sys.exc_info()))
-        #
-        #         if ext in mimeTypes["image"]:
-        #             debug.info(file_abs_path)
-        #             hex_file_path = hashlib.sha256(file_abs_path.encode()).hexdigest()
-        #             debug.info(hex_file_path)
-        #             self.thumbs[file_abs_path] = hex_file_path
-        #             thumb_image = filesThumbsDir + hex_file_path + ".jpeg"
-        #             if os.path.exists(thumb_image):
-        #                 pass
-        #             else:
-        #                 try:
-        #                     gen_thumb_cmd = mimeConvertCmds["image"].format(file_abs_path, thumb_image)
-        #                     subprocess.call(shlex.split(gen_thumb_cmd))
-        #                 except:
-        #                     debug.info(str(sys.exc_info()))
-        #                 self.result.emit(thumb_image)
-        #
-        # with open(thumbs_conf_file, 'w') as conf_file:
-        #     json.dump(self.thumbs, conf_file, sort_keys=True, indent=4)
-        # self.finished.emit()
-
 
 class RsyncThread(QThread):
     progress_updated = Signal(int)
@@ -1744,17 +1604,6 @@ class GetSizeThread(QThread):
         self.cmd = cmd
 
     def run(self):
-        # try:
-        #     p = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1,
-        #                          universal_newlines=True)
-        #     out, err = p.communicate()
-        #     size = out.split("\t")[-2].split("\n")[1]
-        # except :
-        #     debug.info(str(sys.exc_info()))
-        # else:
-        #     self.result.emit(size)
-        # finally:
-        #     self.finished.emit()
         try:
             process = Popen(shlex.split(" ".join(self.cmd)), stdout=PIPE, stderr=STDOUT, bufsize=1,
                             universal_newlines=True)
