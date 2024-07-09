@@ -4,6 +4,50 @@ __author__ = "Sanath Shetty K"
 __license__ = "GPL"
 __email__ = "sanathshetty111@gmail.com"
 
+import os
+
+homeDir = os.path.expanduser("~")
+bluepixelsDownloadDir = "/opt/home/bluepixels/Downloads"
+crapDir = "/blueprod/CRAP/crap"
+crapAliasDir = "/crap/crap.server"
+
+icons = {
+    "home": "home.svg",
+    "dark": "moon.svg",
+    "light": "sun.svg",
+    "list": "layout-list.svg",
+    "icons": "layout-grid.svg",
+    "prev_dir": "go-up.svg",
+    "go": "rotate-cw.svg",
+    "search": "search.svg",
+    "clear": "clear.svg",
+    "close": "cross-white.svg",
+    "add": "plus.svg",
+    "remove": "minus.svg",
+    "rename": "edit.svg",
+    "copy": "copy.svg",
+    "cut": "cut.svg",
+    "paste": "paste.svg",
+    "delete": "delete.svg",
+    "new_folder": "new-folder.svg",
+    "add_favourites": "add-favourites.svg",
+    "details": "info.svg",
+    "help": "help.svg",
+    "home_g": "home-green.svg",
+    "folder": "folder-other.svg",
+    "server": "server-green.svg",
+    "download": "download-green.svg",
+    "temp": "folder-temp-green.svg"
+}
+
+dirPermissions = {
+    "renamePermittedDirs": [bluepixelsDownloadDir, crapDir, crapAliasDir, homeDir],
+    "cutCopyPermittedDirs": [bluepixelsDownloadDir, crapDir, crapAliasDir, homeDir],
+    "pastePermittedDirs": [crapDir, crapAliasDir, homeDir],  # REMINDER : Do NOT add bluepixels downloads folder
+    "deletePermittedDirs": [bluepixelsDownloadDir, crapDir, crapAliasDir, homeDir],
+    "newFolderPermittedDirs": [bluepixelsDownloadDir, crapDir, crapAliasDir, homeDir],
+    "prohibitedDirs": ["/blueprod/STOR", "/proj", "/library","/aumbackup"]
+}
 
 mimeTypes = {
     "image": ["exr","hdr","jpeg","jpg","png","svg","tiff","tga","EXR","HDR","JPEG","JPG","PNG","SVG","TIFF","TGA","WEBM","WEBP","webm","webp"],
@@ -42,18 +86,6 @@ mimeTypesOpenCmds = {
     "text": "mousepad \"{0}\" ",
     "pdf": "atril \"{0}\" ",
     "pureref" : "pureref \"{0}\" "
-
-    # "image": "pqiv -i -t -l --browse --max-depth=1 \"{1}\" ",
-    # "image": "pqiv -i -t --bind-key='<Mouse-Scroll-1> { set_scale_level_relative(1.1) }' --bind-key='<Mouse-Scroll-2> { set_scale_level_relative(0.9) }' \"{1}\" ",
-    # "image": "pqiv -i -t --bind-key='<Mouse-Scroll-1> { set_scale_level_relative(1.1); }' \"{1}\" ",
-
-    # "audio": "mpv --lavfi-complex='[aid1] asplit [ao] [v] ; [v] showwaves=mode=line:split_channels=1 [vo]' \"{0}\" ",
-    # "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showcqt[vo]' \"{0}\" ",
-
-    # "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]avectorscope=m=polar:s=800x400[vo]' \"{0}\" ",
-    # "audio": "mpv --lavfi-complex='[aid1]asplit[ao][a]; [a]showspectrum=color=fire:scale=log:orientation=vertical:overlap=1:s=1024x512[vo]' \"{0}\" ",
-    # "audio": "mpv --lavfi-complex='-i gradients=n=7:type=circular,format=rgb0' \"{0}\" ",
-    # "audio": "mpv --lavfi-complex='-i gradients=n=7:type=circular,format=rgb0' \"{0}\" ",
 
     # "blender": {"linux":["project_assigned_application"]}, # Just enter "project_assigned_application" to open certain kinds of files with project assigned apps.
     # "pdf": {"linux":["system_assigned_application"]}, # Just enter "system_assigned_application" to open certain kinds of files with project assigned apps.

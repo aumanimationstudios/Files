@@ -16,6 +16,8 @@ from constants import mimeTypes
 from constants import mimeConvertCmds
 from constants import mimeTypesOpenCmds
 from constants import mimeTypesOpenWithCmds
+from constants import icons
+from constants import dirPermissions
 import widgetProvider
 import argparse
 import glob
@@ -76,16 +78,9 @@ else:
     os.system("mkdir -p {0}".format(filesThumbsDir))
 
 main_ui_file = os.path.join(projDir, "files_3.ui")
-debug.info(main_ui_file)
+# debug.info(main_ui_file)
 
 style_sheet_path = os.path.join(projDir, "styleSheets", "style.qss")
-
-renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
-cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
-pastePermittedDirs = ["/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir] #REMINDER : Do NOT add bluepixels downloads folder
-deletePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
-newFolderPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", "/UNREAL_SHARE/unreal", '/TEMP_STOR2/temp_stor2', homeDir]
-prohibitedDirs = ["/blueprod/STOR", "/proj", "/library","/aumbackup"]
 
 parser = argparse.ArgumentParser(description="File viewer utility")
 parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder")
@@ -131,33 +126,8 @@ current_list_files = None
 current_view = "LIST"
 
 # ICONS
-home_icon = os.path.join(projDir, "imageFiles", "icons", "home.svg")
-dark_icon = os.path.join(projDir, "imageFiles", "icons", "moon.svg")
-light_icon = os.path.join(projDir, "imageFiles", "icons", "sun.svg")
-list_icon = os.path.join(projDir, "imageFiles", "icons", "layout-list.svg")
-icons_icon = os.path.join(projDir, "imageFiles", "icons", "layout-grid.svg")
-prev_dir_icon = os.path.join(projDir, "imageFiles", "icons", "arrow-up.svg")
-go_icon = os.path.join(projDir, "imageFiles", "icons", "rotate-cw.svg")
-search_icon = os.path.join(projDir, "imageFiles", "icons", "search.svg")
-clear_icon = os.path.join(projDir, "imageFiles", "icons", "clear.svg")
-close_icon = os.path.join(projDir, "imageFiles", "icons", "close.svg")
-add_icon = os.path.join(projDir, "imageFiles", "icons", "plus.svg")
-remove_icon = os.path.join(projDir, "imageFiles", "icons", "minus.svg")
-rename_icon = os.path.join(projDir, "imageFiles", "icons", "edit.svg")
-copy_icon = os.path.join(projDir, "imageFiles", "icons", "copy.svg")
-cut_icon = os.path.join(projDir, "imageFiles", "icons", "cut.svg")
-paste_icon = os.path.join(projDir, "imageFiles", "icons", "paste.svg")
-delete_icon = os.path.join(projDir, "imageFiles", "icons", "delete.svg")
-new_folder_icon = os.path.join(projDir, "imageFiles", "icons", "new-folder.svg")
-add_favourites_icon = os.path.join(projDir, "imageFiles", "icons", "add-favourites.svg")
-details_icon = os.path.join(projDir, "imageFiles", "icons", "info.svg")
-help_icon = os.path.join(projDir, "imageFiles", "icons", "help.svg")
-
-home_g_icon = os.path.join(projDir, "imageFiles", "icons", "home-green.svg")
-folder_icon = os.path.join(projDir, "imageFiles", "icons", "folder-other.svg")
-server_icon = os.path.join(projDir, "imageFiles", "icons", "server-green.svg")
-download_icon = os.path.join(projDir, "imageFiles", "icons", "download-green.svg")
-temp_icon = os.path.join(projDir, "imageFiles", "icons", "folder-temp-green.svg")
+icons_base_dir = os.path.join(projDir, "icons")
+icon_paths = {key: os.path.join(icons_base_dir, value) for key, value in constants.icons.items()}
 
 
 class FSM(QtWidgets.QFileSystemModel):
@@ -257,8 +227,9 @@ def init_config():
 def tabs_popup(main_ui, pos):
     menu = QtWidgets.QMenu()
     # self.setStyle(menu)
-    new_action = menu.addAction(QtGui.QIcon(add_icon), "New Tab")
-    close_action = menu.addAction(QtGui.QIcon(close_icon), "Close Tab")
+    set_style(menu)
+    new_action = menu.addAction(QtGui.QIcon(icon_paths["add"]), "New Tab")
+    close_action = menu.addAction(QtGui.QIcon(icon_paths["close"]), "Close Tab")
 
     # action = menu.exec_(context.mapToGlobal(pos))
     action = menu.exec(main_ui.tabWidget.mapToGlobal(pos))
@@ -338,10 +309,10 @@ def current_tab_changed(main_ui, i):
     # debug.info(openTabs)
     if current_list_files.isVisible() and current_icon_files.isHidden():
         current_view = "LIST"
-        main_ui.changeViewButt.setIcon(QtGui.QIcon(icons_icon))
+        main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["icons"]))
     elif current_icon_files.isVisible() and current_list_files.isHidden():
         current_view = "ICON"
-        main_ui.changeViewButt.setIcon(QtGui.QIcon(list_icon))
+        main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["list"]))
 
 
 def close_current_tab(main_ui, i):
@@ -385,19 +356,19 @@ def load_favourites(main_ui):
 
         if key == "Home":
             # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "home.svg")))
-            thumb.setIcon(QtGui.QIcon(home_g_icon))
+            thumb.setIcon(QtGui.QIcon(icon_paths["home_g"]))
         elif key == "Downloads":
             # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "downloads.svg")))
-            thumb.setIcon(QtGui.QIcon(download_icon))
+            thumb.setIcon(QtGui.QIcon(icon_paths["download"]))
         elif key == "Tmp":
             # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "temp.svg")))
-            thumb.setIcon(QtGui.QIcon(temp_icon))
+            thumb.setIcon(QtGui.QIcon(icon_paths["temp"]))
         elif key == "Crap":
             # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "crap.svg")))
-            thumb.setIcon(QtGui.QIcon(server_icon))
+            thumb.setIcon(QtGui.QIcon(icon_paths["server"]))
         else:
             # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-other.svg")))
-            thumb.setIcon(QtGui.QIcon(folder_icon))
+            thumb.setIcon(QtGui.QIcon(icon_paths["folder"]))
 
         thumb.setFocusPolicy(Qt.NoFocus)
         thumb.setStyleSheet(''' QPushButton { text-align: left; } ''')
@@ -431,8 +402,9 @@ def favourites_popup(main_ui, button, editor, enter_button, pos):
 
     menu = QMenu()
     # self.setStyle(menu)
-    rename_action = menu.addAction(QtGui.QIcon(rename_icon), "Rename")
-    remove_action = menu.addAction(QtGui.QIcon(remove_icon), "Remove")
+    set_style(menu)
+    rename_action = menu.addAction(QtGui.QIcon(icon_paths["rename"]), "Rename")
+    remove_action = menu.addAction(QtGui.QIcon(icon_paths["remove"]), "Remove")
     # action = menu.exec_(context.mapToGlobal(pos))
     action = menu.exec(button.mapToGlobal(pos))
 
@@ -560,7 +532,7 @@ def open_list_dir(main_ui, dir_path=""):
     # debug.info(search_term)
 
     permitted = True
-    for x in prohibitedDirs:
+    for x in dirPermissions["prohibitedDirs"]:
         if x in CUR_DIR_SELECTED:
             permitted = False
     if permitted:
@@ -610,7 +582,7 @@ def open_icon_dir(main_ui, dir_path=""):
     # debug.info(search_term)
 
     permitted = True
-    for x in prohibitedDirs:
+    for x in dirPermissions["prohibitedDirs"]:
         if x in CUR_DIR_SELECTED:
             permitted = False
     if permitted:
@@ -671,12 +643,12 @@ def change_view(main_ui):
 
     clear_all_selection()
     if current_view == "LIST":
-        main_ui.changeViewButt.setIcon(QtGui.QIcon(list_icon))
+        main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["list"]))
         current_view = "ICON"
         current_icon_files.show()
         current_list_files.hide()
     elif current_view == "ICON":
-        main_ui.changeViewButt.setIcon(QtGui.QIcon(icons_icon))
+        main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["icons"]))
         current_view = "LIST"
         current_icon_files.hide()
         current_list_files.show()
@@ -807,6 +779,7 @@ def files_popup(main_ui, context, pos):
 
     menu = QtWidgets.QMenu()
     # self.setStyle(menu)
+    set_style(menu)
 
     model, selected_indexes, selected_files = get_selected_files()
 
@@ -818,6 +791,7 @@ def files_popup(main_ui, context, pos):
             open_action = menu.addAction("Open")
             open_with_menu = QtWidgets.QMenu("Open With")
             # self.setStyle(openWithMenu)
+            set_style(open_with_menu)
 
             file_name = str(model.fileName(selected_indexes[0]))
             suffix = pathlib.Path(file_name).suffix.split('.')[-1]
@@ -834,14 +808,14 @@ def files_popup(main_ui, context, pos):
 
             menu.addMenu(open_with_menu)
 
-    copy_action = menu.addAction(QtGui.QIcon(copy_icon), "Copy")
-    cut_action = menu.addAction(QtGui.QIcon(cut_icon), "Cut")
-    paste_action = menu.addAction(QtGui.QIcon(paste_icon), "Paste")
-    new_folder_action = menu.addAction(QtGui.QIcon(new_folder_icon), "New Folder")
-    add_to_fav_action = menu.addAction(QtGui.QIcon(add_favourites_icon), "Add To Favourites")
-    rename_action = menu.addAction(QtGui.QIcon(rename_icon), "Rename")
-    delete_action = menu.addAction(QtGui.QIcon(delete_icon), "Delete")
-    details_action = menu.addAction(QtGui.QIcon(details_icon), "Details")
+    copy_action = menu.addAction(QtGui.QIcon(icon_paths["copy"]), "Copy")
+    cut_action = menu.addAction(QtGui.QIcon(icon_paths["cut"]), "Cut")
+    paste_action = menu.addAction(QtGui.QIcon(icon_paths["paste"]), "Paste")
+    new_folder_action = menu.addAction(QtGui.QIcon(icon_paths["new_folder"]), "New Folder")
+    add_to_fav_action = menu.addAction(QtGui.QIcon(icon_paths["add_favourites"]), "Add To Favourites")
+    rename_action = menu.addAction(QtGui.QIcon(icon_paths["rename"]), "Rename")
+    delete_action = menu.addAction(QtGui.QIcon(icon_paths["delete"]), "Delete")
+    details_action = menu.addAction(QtGui.QIcon(icon_paths["details"]), "Details")
 
     action = menu.exec(context.mapToGlobal(pos))
 
@@ -891,7 +865,7 @@ def copy_files(main_ui):
     current_dir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
 
     permitted = False
-    for x in cutCopyPermittedDirs:
+    for x in dirPermissions["cutCopyPermittedDirs"]:
         if x in current_dir:
             permitted = True
     if permitted:
@@ -930,7 +904,7 @@ def paste_files(main_ui, urls):
                 if dest_path and os.path.exists(dest_path):
                     debug.info(dest_path)
                     permitted = False
-                    for x in pastePermittedDirs:
+                    for x in dirPermissions["pastePermittedDirs"]:
                         if x in dest_path:
                             permitted = True
                     if permitted:
@@ -998,7 +972,7 @@ def create_new_folder(main_ui):
     debug.info(current_dir)
 
     permitted = False
-    for x in newFolderPermittedDirs:
+    for x in dirPermissions["newFolderPermittedDirs"]:
         if x in current_dir:
             permitted = True
     if permitted:
@@ -1107,7 +1081,7 @@ def rename_ui(main_ui):
 
     file_dets = {}
     permitted = False
-    for x in renamePermittedDirs:
+    for x in dirPermissions["renamePermittedDirs"]:
         if x in current_dir:
             permitted = True
     if permitted:
@@ -1176,7 +1150,7 @@ def delete_files(main_ui):
     current_dir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
     debug.info(current_dir)
     permitted = False
-    for x in deletePermittedDirs:
+    for x in dirPermissions["deletePermittedDirs"]:
         if x in current_dir:
             permitted = True
     if permitted:
@@ -1193,10 +1167,11 @@ def delete_files(main_ui):
         debug.info(file_names)
         confirm = QtWidgets.QMessageBox()
         # self.setStyle(confirm)
+        set_style(confirm)
         # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
         confirm.setWindowTitle("Warning!")
         # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
-        confirm.setIconPixmap(QtGui.QPixmap(help_icon))
+        confirm.setIconPixmap(QtGui.QPixmap(icon_paths["help"]))
         confirm.setText("<b>Permanently Delete these item(s)?</b>"+"\n")
         confirm.setInformativeText(",\n".join(i for i in file_names))
         confirm.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
@@ -1275,6 +1250,11 @@ def set_size(text_edit, size):
 def messages(main_ui, color, msg):
     # main_ui.messages.setStyleSheet("color: %s" %color)
     main_ui.messages.setText(f"{msg}")
+
+
+def set_style(ui):
+    with open(style_sheet_path, "r") as sS:
+        ui.setStyleSheet(sS.read())
 
 
 # def setStyle(self,ui):
@@ -1362,7 +1342,7 @@ def download_video(main_ui):
     if link:
         if os.path.exists(down_dir):
             permitted = False
-            for x in pastePermittedDirs:
+            for x in dirPermissions["pastePermittedDirs"]:
                 if x in down_dir:
                     permitted = True
             if permitted:
@@ -1632,7 +1612,7 @@ def files_window(main_ui):
     # main_ui = main_ui
     # file.close()
     main_ui.setWindowTitle("FILES")
-    main_ui.setWindowIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "icons", "folder-main.svg")))
+    main_ui.setWindowIcon(QtGui.QIcon(os.path.join(projDir, "icons", "folder-main.svg")))
 
     # sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
     # main_ui.setStyleSheet(sS.read())
@@ -1668,15 +1648,15 @@ def files_window(main_ui):
     main_ui.tabWidget.currentChanged.connect(lambda x, mu=main_ui: current_tab_changed(mu, x))
     main_ui.tabWidget.tabCloseRequested.connect(lambda x, mu=main_ui: close_current_tab(mu, x))
 
-    main_ui.changeViewButt.setIcon(QtGui.QIcon(icons_icon))
-    main_ui.previousDirButt.setIcon(QtGui.QIcon(prev_dir_icon))
-    main_ui.changeDirButt.setIcon(QtGui.QIcon(go_icon))
-    main_ui.searchButt.setIcon(QtGui.QIcon(search_icon))
-    main_ui.homeButt.setIcon(QtGui.QIcon(home_icon))
-    main_ui.themeButt.setIcon(QtGui.QIcon(light_icon))
+    main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["icons"]))
+    main_ui.previousDirButt.setIcon(QtGui.QIcon(icon_paths["prev_dir"]))
+    main_ui.changeDirButt.setIcon(QtGui.QIcon(icon_paths["go"]))
+    main_ui.searchButt.setIcon(QtGui.QIcon(icon_paths["search"]))
+    main_ui.homeButt.setIcon(QtGui.QIcon(icon_paths["home"]))
+    main_ui.themeButt.setIcon(QtGui.QIcon(icon_paths["light"]))
 
-    main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(clear_icon))
-    main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(clear_icon))
+    main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(icon_paths["clear"]))
+    main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(icon_paths["clear"]))
 
     # self.changeViewSc = QShortcut(QKeySequence("Ctrl+V"), self)
     # self.changeViewSc.activated.connect(self.change_view)
