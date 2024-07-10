@@ -1691,10 +1691,10 @@ def files_window(main_ui):
     try:
         current_icon_files.customContextMenuRequested.connect(
             lambda x, mu=main_ui, context=current_icon_files.viewport(): files_popup(mu, context, x))
-        current_icon_files.doubleClicked.connect(lambda x: open_file())
+        current_icon_files.doubleClicked.connect(lambda x, mu=main_ui: open_file(mu))
         current_list_files.customContextMenuRequested.connect(
             lambda x, mu=main_ui, context=current_list_files.viewport(): files_popup(mu, context, x))
-        current_list_files.doubleClicked.connect(lambda x: open_file())
+        current_list_files.doubleClicked.connect(lambda x, mu=main_ui: open_file(mu))
     except:
         debug.info(str(sys.exc_info()))
 
