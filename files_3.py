@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 # *-* coding: utf-8 *-*
 __author__ = "Sanath Shetty K"
 __license__ = "GPL"
@@ -1660,8 +1660,8 @@ def files_window(main_ui):
 
     # self.changeViewSc = QShortcut(QKeySequence("Ctrl+V"), self)
     # self.changeViewSc.activated.connect(self.change_view)
-    QShortcut(QKeySequence("Ctrl+T"), main_ui).activated.connect(lambda x, mainui=main_ui: tab_open_doubleclick(main_ui))
-    # QShortcut(QKeySequence("Ctrl+W"),main_ui).activated.connect(lambda curr_tab_index = main_ui.tabWidget.currentIndex() :self.close_current_tab(currTabIndex))
+    QShortcut(QKeySequence("Ctrl+T"), main_ui).activated.connect(lambda mu=main_ui: tab_open_doubleclick(mu))
+    # QShortcut(QKeySequence("Ctrl+W"), main_ui).activated.connect(lambda mu=main_ui, curr_tab_index=main_ui.tabWidget.currentIndex(): close_current_tab(mu, curr_tab_index))
     QShortcut(QKeySequence("Ctrl+F"), main_ui).activated.connect(main_ui.searchBox.setFocus)
 
     main_ui.changeViewButt.setShortcut(QtGui.QKeySequence("V"))

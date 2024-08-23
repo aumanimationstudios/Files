@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
@@ -21,5 +21,7 @@ if [ "$DIR" != "$RDIR" ]; then
 fi
 #echo "DIR is '$DIR'"
 echo "Loading..."
+source "$DIR"/files-env/bin/activate
 cd "$DIR" || return
-/usr/bin/python3 files_3.py "$@"
+python3 "$DIR"/files_3.py
+cd - || return

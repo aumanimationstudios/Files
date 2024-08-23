@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 # *-* coding: utf-8 *-*
 __author__ = "Sanath Shetty K"
 __license__ = "GPL"
