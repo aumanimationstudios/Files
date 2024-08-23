@@ -515,7 +515,7 @@ def open_dir(main_ui, dir_path=""):
     gen_thumb_thread = GenThumbThread(dir_path=dir_path, parent=app)
     # gen_thumb_thread.result.connect(lambda d, mu=main_ui: after_video_download(mu, d))
     # gen_thumb_thread.progress.connect(lambda u, mu=main_ui: update_download_progress(mu, u))
-    gen_thumb_thread.finished.connect(thumb_gen_finished)
+    gen_thumb_thread.finished.connect(lambda x: thumb_gen_finished(x))
     threads.append(gen_thumb_thread)
     gen_thumb_thread.start()
 
@@ -1399,22 +1399,37 @@ def cancel_video_download(main_ui):
     after_video_download(main_ui, "Cancelled")
 
 
-def thumb_gen_finished():
-    debug.info("Thumbnails Generated.")
+def thumb_gen_finished(finished_signal):
+    debug.info(finished_signal)
+    for thread in threads:
+        if not thread.isRunning():
+            threads.remove(thread)
 
 
 def stop_threads(main_ui):
     debug.info(threads)
-    for thread in threads:
-        if thread.isRunning():
-            thread.stop()
-            thread.wait()
-    debug.info("Running Threads Stopped.")
-    main_ui.close()
+    try:
+        for thread in threads:
+            if thread.isRunning():
+                debug.info("Stopping thread")
+                thread.stop()
+                thread.wait()
+                try:
+                    thread.deleteLater()
+                except Exception as e:
+                    debug.info(f"Error Stopping Thread : {e}")
+            else:
+                debug.info("Thread is not running")
+            threads.remove(thread)
+        debug.info("Running Threads Stopped.")
+        main_ui.close()
+    except Exception as e:
+        debug.info(f"Error Stopping Threads : {e}")
+        main_ui.close()
 
 
 class GenThumbThread(QThread):
-    finished = Signal()
+    finished = Signal(str, name="finished_signal")
     # error = Signal(str)
     # result = Signal(str)
 
@@ -1462,7 +1477,7 @@ class GenThumbThread(QThread):
         if self._running:
             with open(thumbs_conf_file, 'w') as conf_file:
                 json.dump(self.thumbs, conf_file, sort_keys=True, indent=4)
-            self.finished.emit()
+            self.finished.emit("Thumbnails Generated")
         else:
             debug.info("Thread stopped before completion.")
 
