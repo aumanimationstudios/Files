@@ -1422,10 +1422,10 @@ def stop_threads(main_ui):
                 debug.info("Thread is not running")
             threads.remove(thread)
         debug.info("Running Threads Stopped.")
-        main_ui.close()
+        # main_ui.close()
     except Exception as e:
         debug.info(f"Error Stopping Threads : {e}")
-        main_ui.close()
+        # main_ui.close()
 
 
 class GenThumbThread(QThread):
