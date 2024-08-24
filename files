@@ -25,3 +25,5 @@ source "$DIR"/files-env/bin/activate
 cd "$DIR" || return
 python3 "$DIR"/files_3.py
 cd - || return
+# Fix terminal window
+stty sane

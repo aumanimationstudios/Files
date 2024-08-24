@@ -189,7 +189,8 @@ class FSM(QtWidgets.QFileSystemModel):
             elif not file_name.startswith("."):
                 return self.icon_cache[file_type]
         except Exception as e:
-            debug.info(f"Error getting thumbnail for {file_abs_path}: {str(e)}")
+            # debug.info(f"Error getting thumbnail for {file_abs_path}: {str(e)}")
+            return self.icon_cache[file_type]
 
         return self.icon_cache[file_type]
 
@@ -1402,8 +1403,13 @@ def cancel_video_download(main_ui):
 def thumb_gen_finished(finished_signal):
     debug.info(finished_signal)
     for thread in threads:
-        if not thread.isRunning():
+        # if not thread.isRunning():
+        if thread.isFinished():
+            debug.info(f"Thread <{thread.name}> is finished. Deleting...")
+            thread.deleteLater()
             threads.remove(thread)
+        # else:
+        #     debug.info(f"Thread {thread} is still running or not terminated yet.")
 
 
 def stop_threads(main_ui):
@@ -1411,21 +1417,21 @@ def stop_threads(main_ui):
     try:
         for thread in threads:
             if thread.isRunning():
-                debug.info("Stopping thread")
+                debug.info(f"Stopping thread <{thread.name}>")
                 thread.stop()
+                thread.quit()
                 thread.wait()
-                try:
+                if thread.isFinished():
                     thread.deleteLater()
-                except Exception as e:
-                    debug.info(f"Error Stopping Thread : {e}")
             else:
-                debug.info("Thread is not running")
-            threads.remove(thread)
-        debug.info("Running Threads Stopped.")
-        # main_ui.close()
+                debug.info(f"Thread <{thread.name}> is not running")
+                if thread.isFinished():
+                    thread.deleteLater()
+            # NOTE: DO NOT Remove thread from threads
+            # threads.remove(thread)
+        debug.info("All Running Threads Stopped.")
     except Exception as e:
         debug.info(f"Error Stopping Threads : {e}")
-        # main_ui.close()
 
 
 class GenThumbThread(QThread):
@@ -1438,6 +1444,7 @@ class GenThumbThread(QThread):
         self.dir_path = dir_path
         self.thumbs = thumbs
         self._running = True
+        self.name = str(self.dir_path).replace("/", ":")
 
     def stop(self):
         self._running = False
