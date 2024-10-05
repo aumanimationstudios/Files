@@ -352,6 +352,16 @@
                  </property>
                 </widget>
                </item>
+               <item row="7" column="0">
+                <widget class="QCheckBox" name="fhdmp4">
+                 <property name="text">
+                  <string>FHD MP4</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </item>
             </layout>

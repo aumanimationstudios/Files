@@ -1355,7 +1355,9 @@ def download_video(main_ui):
                 main_ui.downloadButt.hide()
                 main_ui.cancelButt.show()
 
-                dT = DownloadVideoThread(path,link, app)
+                fhdmp4 = main_ui.fhdmp4.isChecked()
+
+                dT = DownloadVideoThread(path,link, fhdmp4, app)
                 dT.result.connect(lambda d, mu=main_ui: after_video_download(mu, d))
                 dT.progress.connect(lambda u, mu=main_ui: update_download_progress(mu, u))
                 # dT.finished.connect(lambda x : self.afterVideoDownload(x))
@@ -1532,16 +1534,29 @@ class DownloadVideoThread(QThread):
     result = Signal(str)
     finished = Signal()
 
-    def __init__(self, path, link, parent=None):
+    def __init__(self, path, link, fhdmp4=False, parent=None):
         super().__init__(parent)
         self.path = path
         self.link = link
+        self.fhdmp4 = fhdmp4
 
     @Slot()
     def run(self):
-        down_cmd = os.path.join(externalToolsDir, "yt-dlp_linux") + " --external-downloader aria2c " \
+        # down_cmd = os.path.join(externalToolsDir, "yt-dlp_linux") + " --external-downloader aria2c " \
+        #             " --external-downloader-args '--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
+        #             "-o \"{0}\" \"{1}\" ".format(self.path, self.link)
+        if self.fhdmp4:
+            down_cmd = os.path.join(externalToolsDir, "yt-dlp_linux") + \
+                       " --external-downloader aria2c " \
+                       " --external-downloader-args '--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
+                       "-f 'bv*[ext=mp4][height<=1080]/b[ext=mp4][height<=480] / wv*/w' " \
+                       "-o \"{0}\" \"{1}\" ".format(self.path, self.link)
+        else:
+            down_cmd = os.path.join(externalToolsDir, "yt-dlp_linux") + " --external-downloader aria2c " \
                     " --external-downloader-args '--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
-                    "-o \"{0}\" \"{1}\" ".format(self.path, self.link)
+                    "-o \"{0}\" \"{1}\" ".format(self.path,
+                                                 self.link)
+
         debug.info(down_cmd)
         try:
             # p = subprocess.Popen(shlex.split(downCmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -1552,46 +1567,55 @@ class DownloadVideoThread(QThread):
             p = Popen(split(down_cmd), stdout=PIPE, stderr=PIPE, universal_newlines=True)
             # currDownloads.append(p)
             currDownloads[p.pid] = self.path
-            msg = ""
+            # msg = ""
+            percentage_pattern = re.compile(r"(\d{1,3}(?:\.\d+)?)%")
+
             for line in p.stdout:
                 if line:
-                    debug.info(line)
-                    if "Unable to download webpage" in line:
-                        msg = "Unable to download video"
-                    elif "already been downloaded" in line:
-                        msg = "Already been downloaded"
-                    elif "100%" in line:
-                        msg = "Video Downloaded"
-                    elif "Unsupported URL" in line:
-                        msg = "Unsupported URL"
-                    elif "looks truncated" in line:
-                        msg = "Url looks truncated"
-                    elif "Unable to extract video data" in line:
-                        msg = "Unable to extract video data"
-                    elif "Download aborted" in line:
-                        msg = "Download aborted"
-                    elif "Redirecting to" in line:
-                        msg = "Aborted"
-                    elif "%" in line:
-                        sync_data = (tuple(filter(None, line.strip().split('('))))
-                        if sync_data:
-                            percent = sync_data[1].split("%")[0].strip()
-                            self.progress.emit(int(percent))
+                    debug.info(line.strip())
+                    # if "Unable to download webpage" in line:
+                    #     msg = "Unable to download video"
+                    # elif "already been downloaded" in line:
+                    #     msg = "Already been downloaded"
+                    # elif "100%" in line:
+                    #     msg = "Video Downloaded"
+                    # elif "Unsupported URL" in line:
+                    #     msg = "Unsupported URL"
+                    # elif "looks truncated" in line:
+                    #     msg = "Url looks truncated"
+                    # elif "Unable to extract video data" in line:
+                    #     msg = "Unable to extract video data"
+                    # elif "Download aborted" in line:
+                    #     msg = "Download aborted"
+                    # elif "Redirecting to" in line:
+                    #     msg = "Aborted"
+                    # elif "%" in line:
+                    match = percentage_pattern.search(line)
+                    # sync_data = (tuple(filter(None, line.strip().split('('))))
+                    if match:
+                        # percent = sync_data[1].split("%")[0].strip()
+                        percent = float(match.group(1))
+                        self.progress.emit(int(percent))
                     elif "Deleting original file" in line:
                         self.result.emit("Download finished")
                         self.finished.emit()
                         del currDownloads[p.pid]
-                    else:
-                        msg = "Failed"
+                        break
+                    # else:
+                    #     msg = "Failed"
+            p.stdout.close()
+            p.wait()
             if p.returncode == 0:
                 self.result.emit("Download finished")
-                self.finished.emit()
+                # self.finished.emit()
             else:
                 debug.info(f"Command failed with return code: {p.returncode}")
+                self.result.emit(f"Error during download (code {p.returncode})")
         except Exception as e:
-            debug.info(str(sys.exc_info()))
-        else:
-            self.result.emit(msg)
+            debug.info(f"Exception occurred: {e}")
+            self.result.emit(f"Error occurred: {str(e)}")
+        # else:
+        #     self.result.emit(msg)
         finally:
             self.finished.emit()
             return
