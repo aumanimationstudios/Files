@@ -1542,83 +1542,53 @@ class DownloadVideoThread(QThread):
 
     @Slot()
     def run(self):
-        # down_cmd = os.path.join(externalToolsDir, "yt-dlp_linux") + " --external-downloader aria2c " \
-        #             " --external-downloader-args '--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
-        #             "-o \"{0}\" \"{1}\" ".format(self.path, self.link)
+        base_cmd = (
+                os.path.join(externalToolsDir, "yt-dlp_linux")
+                + " --external-downloader aria2c "
+                + " --external-downloader-args '--summary-interval 1 --download-result=hide "
+                + "-c -s 10 -x 10 -k 1M' -o \"{0}\" \"{1}\""
+        )
         if self.fhdmp4:
-            down_cmd = os.path.join(externalToolsDir, "yt-dlp_linux") + \
-                       " --external-downloader aria2c " \
-                       " --external-downloader-args '--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
-                       "-f 'bv*[ext=mp4][height<=1080]/b[ext=mp4][height<=480] / wv*/w' " \
-                       "-o \"{0}\" \"{1}\" ".format(self.path, self.link)
+            down_cmd = base_cmd.format(self.path, self.link) + \
+                       " -f 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]'"
         else:
-            down_cmd = os.path.join(externalToolsDir, "yt-dlp_linux") + " --external-downloader aria2c " \
-                    " --external-downloader-args '--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
-                    "-o \"{0}\" \"{1}\" ".format(self.path,
-                                                 self.link)
+            down_cmd = base_cmd.format(self.path, self.link)
 
-        debug.info(down_cmd)
         try:
-            # p = subprocess.Popen(shlex.split(downCmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            #                      bufsize=1,universal_newlines=True, preexec_fn=os.setsid)
-            # currDownloads.append(p)
-            # msg = ""
+            debug.info(f"Executing command: {down_cmd}")
 
             p = Popen(split(down_cmd), stdout=PIPE, stderr=PIPE, universal_newlines=True)
-            # currDownloads.append(p)
             currDownloads[p.pid] = self.path
-            # msg = ""
+
             percentage_pattern = re.compile(r"(\d{1,3}(?:\.\d+)?)%")
 
             for line in p.stdout:
                 if line:
                     debug.info(line.strip())
-                    # if "Unable to download webpage" in line:
-                    #     msg = "Unable to download video"
-                    # elif "already been downloaded" in line:
-                    #     msg = "Already been downloaded"
-                    # elif "100%" in line:
-                    #     msg = "Video Downloaded"
-                    # elif "Unsupported URL" in line:
-                    #     msg = "Unsupported URL"
-                    # elif "looks truncated" in line:
-                    #     msg = "Url looks truncated"
-                    # elif "Unable to extract video data" in line:
-                    #     msg = "Unable to extract video data"
-                    # elif "Download aborted" in line:
-                    #     msg = "Download aborted"
-                    # elif "Redirecting to" in line:
-                    #     msg = "Aborted"
-                    # elif "%" in line:
                     match = percentage_pattern.search(line)
-                    # sync_data = (tuple(filter(None, line.strip().split('('))))
                     if match:
-                        # percent = sync_data[1].split("%")[0].strip()
                         percent = float(match.group(1))
                         self.progress.emit(int(percent))
-                    elif "Deleting original file" in line:
-                        self.result.emit("Download finished")
-                        self.finished.emit()
-                        del currDownloads[p.pid]
-                        break
-                    # else:
-                    #     msg = "Failed"
+
             p.stdout.close()
             p.wait()
+
             if p.returncode == 0:
                 self.result.emit("Download finished")
-                # self.finished.emit()
             else:
-                debug.info(f"Command failed with return code: {p.returncode}")
-                self.result.emit(f"Error during download (code {p.returncode})")
+                error_msg = f"Download failed with return code: {p.returncode}"
+                debug.info(error_msg)
+                self.result.emit(error_msg)
+
         except Exception as e:
-            debug.info(f"Exception occurred: {e}")
-            self.result.emit(f"Error occurred: {str(e)}")
-        # else:
-        #     self.result.emit(msg)
+            error_msg = f"An error occurred: {str(e)}"
+            debug.info(error_msg)
+            self.result.emit(error_msg)
+
         finally:
+            if p.pid in currDownloads:
+                del currDownloads[p.pid]
             self.finished.emit()
-            return
 
 
 class GetSizeThread(QThread):
