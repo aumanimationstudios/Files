@@ -203,7 +203,23 @@ class DateFormatDelegate(QtWidgets.QStyledItemDelegate):
     def displayText(self, value, locale):
         # return value.toDate().toString(self.date_format)
         # return QDate.fromString(value, "yyyy-MM-dd").toString(self.format)
-        return QDateTime.fromString(value, "MM/dd/yy hh:mm a").toString(self.format)
+        # return QDateTime.fromString(value, "MM/dd/yy hh:mm a").toString(self.format)
+
+        dt = QtCore.QDateTime.fromString(value, 'M/d/yy h:mm AP')
+
+        if dt.isValid():
+            if dt.date().year() < 1950:
+                dt = dt.addYears(100)
+            today = QtCore.QDate.currentDate()
+            yesterday = today.addDays(-1)
+            if dt.date() == today:
+                return "Today"
+            elif dt.date() == yesterday:
+                return "Yesterday"
+            return dt.toString('dd/MM/yyyy')
+
+        # Fallback to default if parsing fails
+        return super().displayText(value, locale)
 
 
 def init_config():
