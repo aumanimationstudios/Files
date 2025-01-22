@@ -318,8 +318,8 @@ def current_tab_changed(main_ui, i):
         # debug.info(currDirPath)
         main_ui.currentFolderBox.clear()
         main_ui.currentFolderBox.setText(curr_dir_path)
-        main_ui.pathBox.clear()
-        main_ui.pathBox.setText(curr_dir_path)
+        # main_ui.pathBox.clear()
+        # main_ui.pathBox.setText(curr_dir_path)
     except:
         debug.info(str(sys.exc_info()))
     # currTabIndex = main_ui.tabWidget.currentIndex()
@@ -507,7 +507,7 @@ def open_dir(main_ui, dir_path=""):
     open_list_dir(main_ui, dir_path)
     open_icon_dir(main_ui, dir_path)
 
-    main_ui.pathBox.setText(dir_path)
+    # main_ui.pathBox.setText(dir_path)
 
     curr_dir_path = str(dir_path)
     curr_dir_name = str(curr_dir_path.split(os.sep)[-1])
@@ -1265,7 +1265,7 @@ def set_size(text_edit, size):
 
 
 def messages(main_ui, color, msg):
-    # main_ui.messages.setStyleSheet("color: %s" %color)
+    main_ui.messages.setStyleSheet("color: %s" %color)
     main_ui.messages.setText(f"{msg}")
 
 
@@ -1353,6 +1353,7 @@ def after_video_download(main_ui, msg):
 
 
 def download_video(main_ui):
+    messages(main_ui, "white", "")
     link = str(main_ui.urlBox.text().strip())
     down_dir = str(os.path.abspath(os.path.expanduser(main_ui.pathBox.text().strip())))
     path = str(os.path.abspath(os.path.expanduser(main_ui.pathBox.text().strip())))+os.sep+"%(title)s.%(ext)s"
@@ -1585,12 +1586,26 @@ class DownloadVideoThread(QThread):
                     if match:
                         percent = float(match.group(1))
                         self.progress.emit(int(percent))
-
+                    if "has already been downloaded" in line:
+                        file_path_match = re.search(r'(?<=\s)(.*?)(?=\s*has already been downloaded)', line)
+                        if file_path_match:
+                            downloaded_video_path = file_path_match.group(0).strip()
+                            debug.info(downloaded_video_path)
+                    if "Merging formats into" in line:
+                        merge_path_match = re.search(r'Merging formats into \"(.*?)\"', line)
+                        if merge_path_match:
+                            downloaded_video_path = merge_path_match.group(1).strip()
+                            debug.info(downloaded_video_path)
             p.stdout.close()
             p.wait()
 
-            if p.returncode == 0:
-                self.result.emit("Download finished")
+            if p.returncode == 0 and downloaded_video_path:
+                # get_thumb_cmd = f"{os.path.join(externalToolsDir, 'yt-dlp_linux')} --get-thumbnail \"{self.link}\""
+                # thumb_link = subprocess.check_output(split(get_thumb_cmd), universal_newlines=True).strip()
+                # debug.info(thumb_link)
+
+                os.utime(downloaded_video_path, None)  # Sets the access and modification times to now
+                self.result.emit(f"Download finished: {downloaded_video_path}")
             else:
                 error_msg = f"Download failed with return code: {p.returncode}"
                 debug.info(error_msg)
@@ -1657,6 +1672,9 @@ def files_window(main_ui):
 
     # currIconFiles = main_ui.iconFiles
     # currListFiles = main_ui.listFiles
+
+    main_ui.pathBox.clear()
+    main_ui.pathBox.setText(places["Downloads"])
 
     main_ui.currentFolderBox.clear()
     main_ui.currentFolderBox.setText(ROOTDIR)
