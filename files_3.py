@@ -95,6 +95,8 @@ thumbs = {}
 threads = []
 openTabs = {}
 
+gif_convert_threads = []
+
 mimetype_reverse_lookup = {}
 for mimetype, extensions in mimeTypes.items():
     for ext in extensions:
@@ -1323,6 +1325,13 @@ def show_video_downloader(mu):
         mu.videoDownloaderFrame.hide()
 
 
+def show_gif_converter(mu):
+    if not mu.gifConverterFrame.isVisible():
+        mu.gifConverterFrame.show()
+    else:
+        mu.gifConverterFrame.hide()
+
+
 def audio_restart():
     ar_cmd = "/usr/local/bin/audio-restart"
     debug.info(ar_cmd)
@@ -1339,6 +1348,52 @@ def blender_media_viewer():
     bmv_cmd = "/proj/standard/share/blender-3.0/blender --app-template blender_media_viewer -w"
     debug.info(bmv_cmd)
     subprocess.Popen(shlex.split(bmv_cmd))
+
+
+def convert_to_gif(main_ui):
+    messages(main_ui, "white", "")
+    input_video = str(main_ui.inputVideoBox.text().strip())
+    input_video_path = os.path.abspath(input_video.replace("file://", ""))
+
+    if os.path.exists(input_video_path):
+        output_gif = str(main_ui.outputGifBox.text().strip())
+        if not output_gif.endswith('.gif'):
+            output_gif += ".gif"
+        output_gif = os.path.abspath(output_gif.replace("file://", ""))
+        output_gif_path = os.path.join(os.path.dirname(input_video_path), os.path.basename(output_gif))
+
+        main_ui.inputVideoBox.setReadOnly(True)
+        main_ui.outputGifBox.setReadOnly(True)
+        main_ui.gifConvertButt.setEnabled(False)
+
+        try:
+            for thread in gif_convert_threads:
+                thread.stop()
+                thread.quit()
+                thread.wait()
+                if thread.isFinished():
+                    thread.deleteLater()
+        except Exception as e:
+            debug.info(f"Error Stopping Threads : {e}")
+
+        gCT = GifConvertThread(input_video_path, output_gif_path, parent=app)
+        gCT.error.connect(lambda msg, color="red", mu=main_ui: messages(mu, color, msg))
+        gCT.result.connect(lambda msg, color="green", mu=main_ui: messages(mu, color, msg))
+        gCT.finished.connect(lambda mu=main_ui: after_gif_convert(mu))
+        gif_convert_threads.append(gCT)
+        gCT.start()
+
+    else:
+        debug.info("Input video does not exist.")
+        messages(main_ui, "red", "Input video does not exist.")
+        return
+
+
+def after_gif_convert(main_ui):
+    main_ui.inputVideoBox.setReadOnly(False)
+    main_ui.outputGifBox.setReadOnly(False)
+    main_ui.gifConvertButt.setEnabled(True)
+    debug.info("GIF conversion finished.")
 
 
 def update_download_progress(main_ui, percentage):
@@ -1550,6 +1605,46 @@ class RsyncThread(QThread):
         self.finished.emit()
 
 
+class GifConvertThread(QThread):
+    error = Signal(str)
+    result = Signal(str)
+
+    def __init__(self, input_video, output_gif, parent=None):
+        super().__init__(parent)
+        self.input_video = input_video
+        self.output_gif = output_gif
+        self._running = True
+
+    def stop(self):
+        self._running = False
+
+    @Slot()
+    def run(self):
+        if not self._running:
+            return
+
+        gif_convert_cmd = [
+            'ffmpeg', '-i', self.input_video, '-vf',
+            "scale=480:-1:flags=lanczos,split[s0][s1];"
+            "[s0]palettegen=stats_mode=diff[p];"
+            "[s1][p]paletteuse=dither=bayer",
+            '-loop', '0', self.output_gif, "-y"
+        ]
+
+        debug.info(gif_convert_cmd)
+
+        process = Popen(gif_convert_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1, universal_newlines=True)
+
+        for line in process.stdout:
+            debug.info(line.strip())
+            if "Error" in line:
+                self.error.emit("Error during GIF conversion.")
+                return
+
+        process.wait()
+        self.result.emit("GIF conversion finished.")
+
+
 class DownloadVideoThread(QThread):
     progress = Signal(int)
     result = Signal(str)
@@ -1734,11 +1829,14 @@ def files_window(main_ui):
     main_ui.changeDirButt.clicked.connect(lambda x, mu=main_ui: change_dir(mu))
     main_ui.searchButt.clicked.connect(lambda x, mu=main_ui: search(mu))
 
+    main_ui.gifConverterFrame.hide()
     main_ui.videoDownloaderFrame.hide()
+    main_ui.gifConverterButt.clicked.connect(lambda x, mu=main_ui: show_gif_converter(mu))
     main_ui.videoDownloaderButt.clicked.connect(lambda x, mu=main_ui: show_video_downloader(mu))
     main_ui.audioRestartButt.clicked.connect(lambda x: audio_restart())
     main_ui.fixPenDisplayButt.clicked.connect(lambda x: fix_pen_display())
-    main_ui.blenderMediaViewerButt.clicked.connect(lambda x: blender_media_viewer())
+    # main_ui.blenderMediaViewerButt.clicked.connect(lambda x: blender_media_viewer())
+    main_ui.gifConvertButt.clicked.connect(lambda x, mu=main_ui: convert_to_gif(mu))
     main_ui.downloadButt.clicked.connect(lambda x, mu=main_ui: download_video(mu))
     main_ui.cancelButt.clicked.connect(lambda x, mu=main_ui: cancel_video_download(mu))
 
