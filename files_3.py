@@ -231,7 +231,11 @@ def init_config():
     def load_config(conf_file_path, default_data):
         if os.path.exists(conf_file_path):
             with open(conf_file_path, 'r') as cf:
-                return json.load(cf)
+                try:
+                    return json.load(cf)
+                except json.JSONDecodeError:
+                    debug.info(f"Corrupted JSON in {conf_file_path}, resetting...")
+                    return default_data
         else:
             with open(conf_file_path, 'w') as cf:
                 json.dump(default_data, cf, sort_keys=True, indent=4)
