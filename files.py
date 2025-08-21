@@ -1,20 +1,13 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 # *-* coding: utf-8 *-*
 __author__ = "Sanath Shetty K"
 __license__ = "GPL"
 __email__ = "sanathshetty111@gmail.com"
 
-
-#DONE : CHANGE DATE FORMAT
-#DONE : DELETE OPTION
-#DONE : RENAME OPTION
-#DONE : ADD FAVOURITES TO SIDEPANE
-#DONE : CUT OPTION
-#DONE : NEW FOLDER OPTION
-#DONE : DETAILS
-#DONE : SEARCH
-#DONE : REPLACE WARNING
-#TODO : TAB OPTION
+# TODO: Separate threads and utility to different files.
+# TODO: Quit and delete threads properly
+# TODO: Handle errors properly
+# TODO: Documentation
 
 
 import debug
@@ -22,16 +15,24 @@ import constants
 from constants import mimeTypes
 from constants import mimeConvertCmds
 from constants import mimeTypesOpenCmds
+from constants import mimeTypesOpenWithCmds
+from constants import icons
+from constants import dirPermissions
+import widgetProvider
 import argparse
 import glob
 import os
 import sys
+import stat
+from datetime import datetime, timedelta
 import re
-import pexpect
+# import pexpect
 import setproctitle
 import signal
 import subprocess
+from subprocess import Popen, PIPE, STDOUT
 import shlex
+from shlex import split
 from collections import OrderedDict
 # import pyperclip
 import time
@@ -39,14 +40,19 @@ import threading
 import traceback
 import pathlib
 import json
-from PIL import Image
+# from PIL import Image
 from multiprocessing import Pool
+import binascii
+import hashlib
 
-from PyQt5.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem
-from PyQt5 import QtCore, uic, QtGui, QtWidgets
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
+from PySide6 import QtCore, QtUiTools, QtGui, QtWidgets
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtWidgets import QApplication, QFileSystemModel, QListWidgetItem, QWidget
+from PySide6.QtGui import QKeySequence
+from PySide6.QtCore import QObject, QThread, Signal, Slot, Qt
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
+from PySide6.QtGui import *
 
 
 projDir = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-1])
@@ -54,45 +60,56 @@ sys.path.append(projDir)
 
 rootDir = "/"
 homeDir = os.path.expanduser("~")
+externalToolsDir = "/proj/standard/share/"
 
 filesThumbsDir = homeDir+"/.cache/thumbnails/files_thumbs/"
 if os.path.exists(filesThumbsDir):
-    pass
+    files = [f for f in os.listdir(filesThumbsDir) if os.path.isfile(os.path.join(filesThumbsDir, f))]
+    for f in files:
+        file_path = os.path.join(filesThumbsDir, f)
+        file_mod_time = datetime.fromtimestamp(os.stat(file_path).st_mtime)  # This is a datetime.datetime object
+        now = datetime.today()
+        max_delay = timedelta(minutes=21600)
+        if now - file_mod_time > max_delay:
+            os.remove(file_path)
+        else:
+            pass
 else:
-    os.mkdir(filesThumbsDir)
+    os.system("mkdir -p {0}".format(filesThumbsDir))
 
 main_ui_file = os.path.join(projDir, "files.ui")
-debug.info(main_ui_file)
+# debug.info(main_ui_file)
 
-# imageFormats = ['png','PNG','exr','EXR','jpg','JPG','jpeg','JPEG','svg','SVG']
-# videoFormats = ['mov','MOV','mp4','MP4','avi','AVI','mkv','MKV','webm','gif']
-# audioFormats = ['mp3','aac','wav']
-# textFormats = ['txt','py','sh','text','json','conf','yml','log']
-# supportedFormats = ['mp4','mp3']
-
-renamePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
-cutCopyPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
-pastePermittedDirs = ["/blueprod/CRAP/crap", "/crap/crap.server", homeDir] #REMINDER : Do NOT add bluepixels downloads folder
-deletePermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
-newFolderPermittedDirs = ["/opt/home/bluepixels/Downloads", "/blueprod/CRAP/crap", "/crap/crap.server", homeDir]
-prohibitedDirs = ["/blueprod/STOR", "/proj", "/library","/aumbackup"]
+style_sheet_path = os.path.join(projDir, "styleSheets", "style.qss")
 
 parser = argparse.ArgumentParser(description="File viewer utility")
 parser.add_argument("-p","--path",dest="path",help="Absolute path of the folder")
 args = parser.parse_args()
 
-confFile = homeDir+os.sep+".config"+os.sep+"files.json"
+favourites_conf_file = homeDir+os.sep+".config"+os.sep+"files_favourites.json"
+thumbs_conf_file = homeDir+os.sep+".config"+os.sep+"files_thumbs.json"
 
-places = {}
-places["Home"] = homeDir
-# places["Root"] = rootDir
-places["Crap"] = "/blueprod/CRAP/crap"
-places["Downloads"] = homeDir+os.sep+"Downloads"
+places = {"Home": homeDir, "Crap": "/blueprod/CRAP/crap", "Downloads": homeDir + os.sep + "Downloads"}
+
+thumbs = {}
+threads = []
+openTabs = {}
+
+gif_convert_threads = []
+
+mimetype_reverse_lookup = {}
+for mimetype, extensions in mimeTypes.items():
+    for ext in extensions:
+        if ext in mimetype_reverse_lookup:
+            mimetype_reverse_lookup[ext].append(mimetype)
+        else:
+            mimetype_reverse_lookup[ext] = [mimetype]
+# debug.info(mimetype_reverse_lookup)
 
 rename = os.path.join(projDir, "rename.py")
 details = os.path.join(projDir, "details.py")
 
-app = None
+# app = None
 assPath = args.path
 
 if(args.path):
@@ -101,99 +118,83 @@ else:
     ROOTDIR = rootDir
 
 CUR_DIR_SELECTED = None
-listIcon = None
-iconsIcon = None
 
 cutFile = False
 
-currDownloads = []
+currDownloads = {}
 
+current_icon_files = None
+current_list_files = None
+current_view = "LIST"
 
-class WorkerSignals(QtCore.QObject):
-    finished = pyqtSignal()
-    error = pyqtSignal(tuple)
-    result = pyqtSignal(object)
-    progress = pyqtSignal(int)
-
-
-class Worker(QtCore.QRunnable):
-    def __init__(self, fn, *args, **kwargs):
-        super(Worker, self).__init__()
-        self.fn = fn
-        self.args = args
-        self.kwargs = kwargs
-        self.signals = WorkerSignals()
-        self.kwargs['progress_callback'] = self.signals.progress
-
-    @pyqtSlot()
-    def run(self):
-        try:
-            result = self.fn(*self.args, **self.kwargs)
-        except:
-            traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
-        else:
-            self.signals.result.emit(result)
-        finally:
-            self.signals.finished.emit()
-
-
-class IconProvider(QtWidgets.QFileIconProvider):
-    def icon(self, fileInfo):
-        if fileInfo.isDir():
-            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-blue.svg"))
-            return QtGui.QIcon.fromTheme("folder")
-        if fileInfo.isFile():
-            if fileInfo.suffix() in mimeTypes["video"]:
-                filePath = fileInfo.filePath()
-                fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir+fileName+".png"
-                if os.path.exists(thumb_image):
-                    return QtGui.QIcon(thumb_image)
-                else:
-                    if fileName.startswith("."):
-                        pass
-                    else:
-                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "video-blue.svg"))
-                return QtGui.QIcon.fromTheme("video-x-generic")
-
-            if fileInfo.suffix() in mimeTypes["audio"]:
-                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "audio-blue.svg"))
-                return QtGui.QIcon.fromTheme("audio-x-generic")
-
-            if fileInfo.suffix() in mimeTypes["image"]:
-                filePath = fileInfo.filePath()
-                fileName = fileInfo.fileName()
-                thumb_image = filesThumbsDir + fileName + ".png"
-                if os.path.exists(thumb_image):
-                    return QtGui.QIcon(thumb_image)
-                else:
-                    if fileName.startswith("."):
-                        pass
-                    else:
-                        return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "image-blue.svg"))
-                return QtGui.QIcon.fromTheme("image-x-generic")
-
-            if fileInfo.suffix() in mimeTypes["text"]:
-                # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "text-blue.svg"))
-                return QtGui.QIcon.fromTheme("text-x-generic")
-
-            # return QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "empty-blue.svg"))
-            # return QtGui.QIcon.fromTheme("text-x-generic-template")
-        return QtWidgets.QFileIconProvider.icon(self, fileInfo)
-
-
-class FSM4Files(QtWidgets.QFileSystemModel):
-
-    def __init__(self,**kwargs):
-        super(FSM4Files, self).__init__(**kwargs)
+# ICONS
+icons_base_dir = os.path.join(projDir, "icons")
+icon_paths = {key: os.path.join(icons_base_dir, value) for key, value in constants.icons.items()}
 
 
 class FSM(QtWidgets.QFileSystemModel):
+    icon_theme = ""
+    try:
+        icon_theme = subprocess.check_output(shlex.split("xfconf-query -lvc xsettings -p /Net/IconThemeName")).decode().split(" ")[-1].strip()
+        debug.info(icon_theme)
+    except Exception as e:
+        # icon_theme = subprocess.check_output(shlex.split("gsettings get org.gnome.desktop.interface icon-theme")).decode().strip()
+        debug.info(f"Icon theme detection failed: {str(e)}")
+        # debug.info(str(sys.exc_info()))
 
     def __init__(self,**kwargs):
         super(FSM, self).__init__(**kwargs)
+        if self.icon_theme:
+            QtGui.QIcon.setThemeName(self.icon_theme)
+        self.icon_cache = {
+            "folder": QtGui.QIcon.fromTheme("folder"),
+            "video": QtGui.QIcon.fromTheme("video-x-generic"),
+            "audio": QtGui.QIcon.fromTheme("audio-x-generic"),
+            "image": QtGui.QIcon.fromTheme("image-x-generic"),
+            "text": QtGui.QIcon.fromTheme("text-x-generic"),
+            "default": QtGui.QIcon.fromTheme("text-x-generic")
+        }
+
+    def data(self, index, role):
+
+        # QtGui.QIcon.setThemeName(self.icon_theme)
+
+        if role == QtCore.Qt.DecorationRole and index.column() == 0:
+            file_info = self.fileInfo(index)
+
+            if file_info.isDir():
+                return self.icon_cache["folder"]
+
+            if file_info.isFile():
+                suffix = file_info.suffix()
+                file_name = file_info.fileName()
+                file_abs_path = file_info.filePath()
+
+                if suffix in mimeTypes["video"]:
+                    return self.get_icon(file_abs_path, "video", file_name)
+                elif suffix in mimeTypes["audio"]:
+                    return self.icon_cache["audio"]
+                elif suffix in mimeTypes["image"]:
+                    return self.get_icon(file_abs_path, "image", file_name)
+                elif suffix in mimeTypes["text"]:
+                    return self.icon_cache["text"]
+
+                return self.icon_cache["default"]
+
+        return super(FSM, self).data(index, role)
+
+    def get_icon(self, file_abs_path, file_type, file_name):
+        try:
+            thumb_image = os.path.join(filesThumbsDir, thumbs[file_abs_path] + ".jpeg")
+            if os.path.exists(thumb_image):
+                return QtGui.QIcon(thumb_image)
+            elif not file_name.startswith("."):
+                return self.icon_cache[file_type]
+        except Exception as e:
+            # debug.info(f"Error getting thumbnail for {file_abs_path}: {str(e)}")
+            return self.icon_cache[file_type]
+
+        return self.icon_cache[file_type]
 
 
 class DateFormatDelegate(QtWidgets.QStyledItemDelegate):
@@ -204,1104 +205,1694 @@ class DateFormatDelegate(QtWidgets.QStyledItemDelegate):
     def displayText(self, value, locale):
         # return value.toDate().toString(self.date_format)
         # return QDate.fromString(value, "yyyy-MM-dd").toString(self.format)
-        return QDateTime.fromString(value, "MM/dd/yy hh:mm a").toString(self.format)
+        # return QDateTime.fromString(value, "MM/dd/yy hh:mm a").toString(self.format)
+
+        dt = QtCore.QDateTime.fromString(value, 'M/d/yy h:mm AP')
+
+        if dt.isValid():
+            if dt.date().year() < 1950:
+                dt = dt.addYears(100)
+            today = QtCore.QDate.currentDate()
+            yesterday = today.addDays(-1)
+            if dt.date() == today:
+                return "Today"
+            elif dt.date() == yesterday:
+                return "Yesterday"
+            return dt.toString('dd/MM/yyyy')
+
+        # Fallback to default if parsing fails
+        return super().displayText(value, locale)
 
 
-class filesWidget():
-    def __init__(self):
-        global listIcon
-        global iconsIcon
+def init_config():
+    global places
+    global thumbs
+    global favourites_conf_file
+    global thumbs_conf_file
 
-        self.threadpool = QtCore.QThreadPool()
-
-        self.main_ui = uic.loadUi(main_ui_file)
-        self.main_ui.setWindowTitle("FILES")
-        self.main_ui.setWindowIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons" , "folder.svg")))
-
-        sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
-        self.main_ui.setStyleSheet(sS.read())
-        sS.close()
-        os.environ['HR_THEME'] = "dark"
-
-        self.main_ui.currentFolderBox.clear()
-        self.main_ui.currentFolderBox.setText(ROOTDIR)
-
-        self.main_ui.treeDirs.sortByColumn(0, QtCore.Qt.AscendingOrder)
-        self.main_ui.listFiles.sortByColumn(0, QtCore.Qt.AscendingOrder)
-
-        ROOTDIRNEW = os.path.abspath(self.main_ui.currentFolderBox.text().strip()).encode('utf-8')
-        debug.info(ROOTDIRNEW)
-
-        modelDirs = self.setDir(ROOTDIRNEW)
-
-        self.openDir(homeDir)
-
-        self.initConfig()
-        self.loadFavourites()
-
-        # listIcon = QtGui.QPixmap(os.path.join(projDir, "imageFiles", "view_list.png"))
-        listIcon = os.path.join(projDir, "imageFiles", "view_list_blue.svg")
-        iconsIcon = os.path.join(projDir, "imageFiles", "view_icons_blue.svg")
-        prevDirIcon = os.path.join(projDir, "imageFiles", "go_up_blue.svg")
-        goIcon = os.path.join(projDir, "imageFiles", "go_down_blue.svg")
-        searchIcon = os.path.join(projDir, "imageFiles", "search_icon.svg")
-
-        self.main_ui.changeViewButt.setIcon(QtGui.QIcon(iconsIcon))
-        self.main_ui.previousDirButt.setIcon(QtGui.QIcon(prevDirIcon))
-        self.main_ui.changeDirButt.setIcon(QtGui.QIcon(goIcon))
-        self.main_ui.searchButt.setIcon(QtGui.QIcon(searchIcon))
-
-        self.main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(
-            QtGui.QIcon(os.path.join(projDir, "imageFiles", "clear_icon.svg")))
-        self.main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(
-            QtGui.QIcon(os.path.join(projDir, "imageFiles", "clear_icon.svg")))
-
-        self.main_ui.changeViewButt.setShortcut(QtGui.QKeySequence("V"))
-        self.main_ui.previousDirButt.setShortcut(QtGui.QKeySequence("Backspace"))
-        self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
-
-        self.main_ui.changeViewButt.setToolTip("Change View (V)")
-        self.main_ui.previousDirButt.setToolTip("Previous Directory (Backspace)")
-        self.main_ui.changeDirButt.setToolTip("Change Directory (Enter)")
-
-        self.main_ui.themeButton.clicked.connect(self.changeTheme)
-        self.main_ui.treeDirs.clicked.connect(lambda x, modelDirs=modelDirs: self.dirSelected(x, modelDirs))
-        self.main_ui.searchBox.textChanged.connect(lambda x : self.search())
-        self.main_ui.changeViewButt.clicked.connect(lambda x : self.changeView())
-        self.main_ui.previousDirButt.clicked.connect(lambda x: self.previousDir())
-        self.main_ui.changeDirButt.clicked.connect(lambda x: self.changeDir())
-        self.main_ui.searchButt.clicked.connect(lambda x: self.search())
-
-        self.main_ui.audioRestartButt.clicked.connect(lambda x: self.audioRestart())
-        self.main_ui.blenderMediaViewerButt.clicked.connect(lambda x: self.blenderMediaViewer())
-        self.main_ui.downloadButt.clicked.connect(lambda x: self.downloadVideo())
-        self.main_ui.cancelButt.clicked.connect(lambda x: self.cancelVideoDownload())
-
-        self.main_ui.iconFiles.customContextMenuRequested.connect(lambda x, context=self.main_ui.iconFiles.viewport(): self.popUpFiles(context, x))
-        self.main_ui.iconFiles.doubleClicked.connect(lambda x : self.openFile())
-        self.main_ui.listFiles.customContextMenuRequested.connect(lambda x, context=self.main_ui.listFiles.viewport() : self.popUpFiles(context, x))
-        self.main_ui.listFiles.doubleClicked.connect(lambda x : self.openFile())
-
-        self.main_ui.progressBar.hide()
-        self.main_ui.downloadProgressBar.hide()
-        self.main_ui.cancelButt.setEnabled(False)
-        self.main_ui.cancelButt.hide()
-        self.messages("white", "")
-
-        # self.main_ui.v_splitter1.setStretchFactor(5, 5)
-        self.main_ui.v_splitter1.setSizes([100, 140])
-        self.main_ui.v_splitter2.setSizes([100, 2000])
-        self.main_ui.h_splitter.setSizes([400, 1000])
-        self.main_ui.listFiles.setColumnWidth(0, 400)
-
-        self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.main_ui.searchBox.setFocus()
-
-        self.main_ui.iconFiles.hide()
-
-        self.main_ui.showMaximized()
-        self.main_ui.update()
-
-        qtRectangle = self.main_ui.frameGeometry()
-        centerPoint = QtWidgets.QDesktopWidget().availableGeometry().center()
-        qtRectangle.moveCenter(centerPoint)
-        self.main_ui.move(qtRectangle.topLeft())
-
-
-    def initConfig(self):
-        global places
-        global confFile
-
-        if os.path.exists(confFile):
-            f = open(confFile)
-            data = json.load(f)
-            places = data
+    def load_config(conf_file_path, default_data):
+        if os.path.exists(conf_file_path):
+            with open(conf_file_path, 'r') as cf:
+                try:
+                    return json.load(cf)
+                except json.JSONDecodeError:
+                    debug.info(f"Corrupted JSON in {conf_file_path}, resetting...")
+                    return default_data
         else:
-            with open(confFile, 'w') as conf_file:
-                json.dump(places, conf_file, sort_keys=True, indent=4)
+            with open(conf_file_path, 'w') as cf:
+                json.dump(default_data, cf, sort_keys=True, indent=4)
+            return default_data
+
+    places = load_config(favourites_conf_file, places)
+    thumbs = load_config(thumbs_conf_file, thumbs)
 
 
-    def loadFavourites(self):
-        global places
-        model = QtGui.QStandardItemModel()
-        self.main_ui.favourites.setModel(model)
+def tabs_popup(main_ui, pos):
+    menu = QtWidgets.QMenu()
+    # self.setStyle(menu)
+    set_style(menu)
+    new_action = menu.addAction(QtGui.QIcon(icon_paths["add"]), "New Tab")
+    close_action = menu.addAction(QtGui.QIcon(icon_paths["close"]), "Close Tab")
 
-        sortedPlaces = OrderedDict(sorted(places.items()))
-        for key, value in sortedPlaces.items():
-            item = QtGui.QStandardItem(key)
-            model.appendRow(item)
+    # action = menu.exec_(context.mapToGlobal(pos))
+    action = menu.exec(main_ui.tabWidget.mapToGlobal(pos))
 
-            frame = QtWidgets.QFrame()
-            hLay = QtWidgets.QHBoxLayout()
-            hLay.setContentsMargins(0, 0, 0, 0)
-
-            line = QtWidgets.QLineEdit()
-            line.setText(key)
-            line.hide()
-
-            thumb = QtWidgets.QPushButton()
-            thumb.setText(key)
-            thumb.setFocusPolicy(Qt.NoFocus)
-
-            entButt = QtWidgets.QPushButton()
-            entButt.setFocusPolicy(Qt.NoFocus)
-            entButt.hide()
-
-            thumb.clicked.connect(lambda x, path=value : self.openDir(path))
-            entButt.clicked.connect(lambda x, button=thumb,editor=line,entButt=entButt : self.changeFavName(button,editor,entButt))
-
-            thumb.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-            thumb.customContextMenuRequested.connect(lambda x,button=thumb,editor=line,entButt=entButt : self.favouritesPopup(button,editor,entButt,x))
-
-            hLay.addWidget(thumb)
-            hLay.addWidget(line)
-            hLay.addWidget(entButt)
-            frame.setLayout(hLay)
-
-            self.main_ui.favourites.setIndexWidget(item.index(), frame)
+    if action == new_action:
+        tab_open_doubleclick(main_ui)
+    if action == close_action:
+        curr_tab_index = main_ui.tabWidget.currentIndex()
+        close_current_tab(main_ui, curr_tab_index)
 
 
-    def favouritesPopup(self,button,editor,entButt,pos):
-        global places
-        currName = button.text()
-        # editorName = editor.text()
-        debug.info(currName)
-        # debug.info(editorName)
+def tab_open_doubleclick(main_ui):
+    global current_icon_files
+    global current_list_files
+    global current_view
 
-        menu = QtWidgets.QMenu()
-        self.setStyle(menu)
-        rename = menu.addAction("Rename")
-        remove = menu.addAction("Remove")
-        # action = menu.exec_(context.mapToGlobal(pos))
-        action = menu.exec_(button.mapToGlobal(pos))
+    debug.info("Tab Opened")
+    content = QFrame()
 
-        if action == rename:
-            self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
-            entButt.setShortcut(QtGui.QKeySequence("Return"))
-            button.hide()
-            editor.show()
-            entButt.show()
-            editor.setFocus()
+    v_layout = QtWidgets.QVBoxLayout()
+    content.setLayout(v_layout)
+    icon_files_1 = widgetProvider.icon_files_widget()
+    list_files_1 = widgetProvider.list_files_widget()
+    v_layout.addWidget(icon_files_1)
+    v_layout.addWidget(list_files_1)
 
-        if action == remove:
-            places.pop(currName)
-            with open(confFile, 'w') as conf_file:
-                json.dump(places, conf_file, sort_keys=True, indent=4)
-            self.initConfig()
-            self.loadFavourites()
+    current_icon_files = icon_files_1
+    current_list_files = list_files_1
+
+    if current_view == "LIST":
+        current_icon_files.hide()
+        current_list_files.show()
+    elif current_view == "ICON":
+        current_icon_files.show()
+        current_list_files.hide()
+    # currIconFiles.hide()
+    current_list_files.setColumnWidth(0, 660)
+
+    current_icon_files.customContextMenuRequested.connect(lambda x, mu=main_ui, context=current_icon_files.viewport(): files_popup(mu, context, x))
+    current_icon_files.doubleClicked.connect(lambda x, mu=main_ui: open_file(main_ui))
+    current_list_files.customContextMenuRequested.connect(lambda x, mu=main_ui, context=current_list_files.viewport(): files_popup(mu, context, x))
+    current_list_files.doubleClicked.connect(lambda x, mu=main_ui: open_file(main_ui))
+
+    curr_dir_path = str(os.path.abspath(main_ui.currentFolderBox.text().strip()))
+    curr_dir_name = str(os.path.abspath(main_ui.currentFolderBox.text().strip())).split(os.sep)[-1]
+
+    i = main_ui.tabWidget.addTab(content, curr_dir_name)
+    main_ui.tabWidget.setCurrentIndex(i)
+
+    open_dir(main_ui, dir_path=curr_dir_path)
+    # main_ui.tabWidget.currentWidget().customContextMenuRequested.connect(self.popUpTabs)
+
+    # main_ui.currentFolderBox.clear()
+    # main_ui.currentFolderBox.setText(main_ui.tabWidget.tabToolTip(i))
 
 
-    def changeFavName(self,button,editor,entButt):
-        currName = button.text()
-        newName = editor.text()
-        debug.info(currName)
-        debug.info(newName)
+def current_tab_changed(main_ui, i):
+    global current_icon_files
+    global current_list_files
+    global current_view
 
-        if newName == currName:
-            debug.info("no changes found in name")
+    current_icon_files = main_ui.tabWidget.currentWidget().findChild(QtWidgets.QListView)
+    current_list_files = main_ui.tabWidget.currentWidget().findChild(QtWidgets.QTreeView)
+
+    try:
+        curr_tab_index = main_ui.tabWidget.currentIndex()
+        # currTabName = main_ui.tabWidget.tabText(curr_tab_index)
+        curr_dir_path = main_ui.tabWidget.tabToolTip(curr_tab_index)
+        # debug.info(currDirPath)
+        main_ui.currentFolderBox.clear()
+        main_ui.currentFolderBox.setText(curr_dir_path)
+        # main_ui.pathBox.clear()
+        # main_ui.pathBox.setText(curr_dir_path)
+    except:
+        debug.info(str(sys.exc_info()))
+    # currTabIndex = main_ui.tabWidget.currentIndex()
+    # debug.info(openTabs)
+    if current_list_files.isVisible() and current_icon_files.isHidden():
+        current_view = "LIST"
+        main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["icons"]))
+    elif current_icon_files.isVisible() and current_list_files.isHidden():
+        current_view = "ICON"
+        main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["list"]))
+
+
+def close_current_tab(main_ui, i):
+    # global currIconFiles
+    # global currListFiles
+    #
+    # currIconFiles = main_ui.tabWidget.currentWidget().findChild(QtWidgets.QListView)
+    # currListFiles = main_ui.tabWidget.currentWidget().findChild(QtWidgets.QTreeView)
+    debug.info(i)
+    if main_ui.tabWidget.count() < 2:
+        return
+
+    main_ui.tabWidget.removeTab(i)
+    # try:
+    #     openTabs.pop(list(openTabs.keys())[i])
+    # except:
+    #     debug.info(str(sys.exc_info()))
+
+
+def load_favourites(main_ui):
+    global places
+    model = QtGui.QStandardItemModel()
+    main_ui.favourites.setModel(model)
+
+    sorted_places = OrderedDict(sorted(places.items()))
+    for key, value in sorted_places.items():
+        item = QtGui.QStandardItem(key)
+        model.appendRow(item)
+
+        frame = QtWidgets.QFrame()
+        h_layout = QtWidgets.QHBoxLayout()
+        h_layout.setContentsMargins(0, 0, 0, 0)
+
+        line = QtWidgets.QLineEdit()
+        line.setText(key)
+        line.hide()
+
+        thumb = QtWidgets.QPushButton()
+
+        thumb.setText(key)
+
+        if key == "Home":
+            # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "home.svg")))
+            thumb.setIcon(QtGui.QIcon(icon_paths["home_g"]))
+        elif key == "Downloads":
+            # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "downloads.svg")))
+            thumb.setIcon(QtGui.QIcon(icon_paths["download"]))
+        elif key == "Tmp":
+            # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "temp.svg")))
+            thumb.setIcon(QtGui.QIcon(icon_paths["temp"]))
+        elif key == "Crap":
+            # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "crap.svg")))
+            thumb.setIcon(QtGui.QIcon(icon_paths["server"]))
         else:
-            for key,value in places.items():
-                if key == currName:
-                    places[newName] = value
-                    places.pop(key)
-                    with open(confFile, 'w') as conf_file:
-                        json.dump(places, conf_file, sort_keys=True, indent=4)
-                    self.initConfig()
-                    self.loadFavourites()
-
-        button.show()
-        editor.hide()
-        entButt.hide()
-        editor.clearFocus()
-        self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
-        entButt.setShortcut(QtGui.QKeySequence(""))
-
-
-    def setDir(self, ROOTDIRNEW):
-        self.clearAllSelection()
-        # debug.info(type(ROOTDIRNEW))
-        if "/blueprod/STOR" in ROOTDIRNEW:
-            debug.info("Danger zone")
-            self.main_ui.treeDirs.itemsExpandable = False
-            self.main_ui.treeDirs.collapseAll()
-        else:
-            # self.messages("green","Generating thumbnails")
-            self.main_ui.treeDirs.itemsExpandable = True
-            modelDirs = FSM(parent=self.main_ui)
-            modelDirs.setIconProvider(IconProvider())
-            # modelDirs.setIconProvider(CustomIconProvider())
-            modelDirs.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
-            modelDirs.setRootPath(ROOTDIRNEW)
-
-            self.main_ui.treeDirs.setModel(modelDirs)
-
-            self.main_ui.treeDirs.hideColumn(1)
-            self.main_ui.treeDirs.hideColumn(2)
-            self.main_ui.treeDirs.hideColumn(3)
-
-            rootIdx = modelDirs.index(ROOTDIRNEW)
-            self.main_ui.treeDirs.setRootIndex(rootIdx)
-
-            # openDir(ROOTDIRNEW, self.main_ui)
-            return (modelDirs)
-
-
-    def openDir(self, dirPath):
-        self.clearAllSelection()
-        self.openListDir(dirPath)
-        self.openIconDir(dirPath)
-
-        self.main_ui.pathBox.setText(dirPath)
-
-        worker = Worker(self.genThumb,dirPath)
-        self.threadpool.start(worker)
-
-
-    def genThumb(self, dirPath, progress_callback):
-        files = [f for f in os.listdir(dirPath) if os.path.isfile(os.path.join(dirPath, f))]
-        for f in files:
-            # debug.info(f)
-            if f.startswith("."):
-                pass
-            else:
-                file_path = os.path.join(dirPath, f)
-                file_extension = os.path.splitext(file_path)[1]
-                # debug.info(file_extension)
-
-                # ext = file_extension.split(".")[1]
-                ext = file_extension.replace(".", "").strip()
-                # debug.info(ext)
-
-                if ext in mimeTypes["video"]:
-                    thumb_image = filesThumbsDir + f + ".png"
-                    if os.path.exists(thumb_image):
-                        pass
-                    else:
-                        try:
-                            # genThumbCmd = "ffmpeg -ss 00:00:01.000 -i \"{0}\" -vf 'scale=128:128:force_original_aspect_ratio=decrease' -vframes 1 \"{1}\" -y ".format(
-                            #               file_path, thumb_image)
-                            genThumbCmd = mimeConvertCmds["video"].format(file_path, thumb_image)
-                            subprocess.call(shlex.split(genThumbCmd))
-                        except:
-                            debug.info(str(sys.exc_info()))
-
-                if ext in mimeTypes["image"]:
-                    thumb_image = filesThumbsDir + f + ".png"
-                    if os.path.exists(thumb_image):
-                        pass
-                    else:
-                        try:
-                            # im = Image.open(file_path)
-                            # im.thumbnail((128,128))
-                            # im.save(thumb_image)
-                            genThumbCmd = mimeConvertCmds["image"].format(file_path, thumb_image)
-                            subprocess.call(shlex.split(genThumbCmd))
-                        except:
-                            debug.info(str(sys.exc_info()))
-
-
-    def openListDir(self, dirPath):
-        global CUR_DIR_SELECTED
-
-        CUR_DIR_SELECTED = dirPath.strip()
-        debug.info(CUR_DIR_SELECTED)
-
-        searchTerm = self.main_ui.searchBox.text().strip()
-        # debug.info(searchTerm)
-
-        permitted = True
-        for x in prohibitedDirs:
-            if x in CUR_DIR_SELECTED:
-                permitted = False
-        if permitted:
-            # self.messages("green", "Generating thumbnails")
-            self.main_ui.treeDirs.itemsExpandable = True
-            self.main_ui.currentFolderBox.clear()
-            self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
-
-            modelFiles = FSM(parent=self.main_ui)
-            modelFiles.setIconProvider(IconProvider())
-            self.main_ui.listFiles.setModel(modelFiles)
-            modelFiles.setRootPath(CUR_DIR_SELECTED)
-
-            modelFiles.setFilter(QtCore.QDir.Dirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
-            modelFiles.setNameFilters([searchTerm+"*"])
-            modelFiles.setNameFilterDisables(False)
-            debug.info(modelFiles.nameFilters())
-
-            rootIdx = modelFiles.index(CUR_DIR_SELECTED)
-
-            self.main_ui.listFiles.setRootIndex(rootIdx)
-
-            self.main_ui.listFiles.setItemDelegateForColumn(3, DateFormatDelegate())
-            return
-        else:
-            debug.info("Danger zone")
-            debug.info("Error! No permission to open.")
-            self.messages("red", "Error! No permission to open.")
-            self.main_ui.treeDirs.itemsExpandable = False
-            self.main_ui.treeDirs.collapseAll()
-            return
-
-
-    def openIconDir(self, dirPath):
-        global CUR_DIR_SELECTED
-
-        CUR_DIR_SELECTED = dirPath.strip()
-        debug.info(CUR_DIR_SELECTED)
-
-        searchTerm = self.main_ui.searchBox.text().strip()
-        # debug.info(searchTerm)
-
-        permitted = True
-        for x in prohibitedDirs:
-            if x in CUR_DIR_SELECTED:
-                permitted = False
-        if permitted:
-            # self.messages("green", "Generating thumbnails")
-            self.main_ui.treeDirs.itemsExpandable = True
-            self.main_ui.currentFolderBox.clear()
-            self.main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
-
-            modelFiles = FSM4Files(parent=self.main_ui)
-            modelFiles.setIconProvider(IconProvider())
-            self.main_ui.iconFiles.setModel(modelFiles)
-            modelFiles.setRootPath(CUR_DIR_SELECTED)
-
-            modelFiles.setFilter(QtCore.QDir.Dirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
-            modelFiles.setNameFilters([searchTerm + "*"])
-            modelFiles.setNameFilterDisables(False)
-            debug.info(modelFiles.nameFilters())
-
-            rootIdx = modelFiles.index(CUR_DIR_SELECTED)
-
-            self.main_ui.iconFiles.setRootIndex(rootIdx)
-            return
-        else:
-            debug.info("Danger zone")
-            debug.info("Error! No permission to open.")
-            self.messages("red", "Error! No permission to open.")
-            self.main_ui.treeDirs.itemsExpandable = False
-            self.main_ui.treeDirs.collapseAll()
-            return
-
-
-    def dirSelected(self, index, model):
-        dirPath = model.filePath(index)
-        self.openDir(dirPath)
-
-
-    def clearAllSelection(self):
-        self.main_ui.iconFiles.clearSelection()
-        self.main_ui.listFiles.clearSelection()
-        debug.info("Cleared Selection")
-
-
-    def changeView(self):
-        self.clearAllSelection()
-        if self.main_ui.iconFiles.isHidden():
-            self.main_ui.changeViewButt.setIcon(QtGui.QIcon(listIcon))
-            self.main_ui.iconFiles.show()
-            self.main_ui.listFiles.hide()
-        else:
-            self.main_ui.changeViewButt.setIcon(QtGui.QIcon(iconsIcon))
-            self.main_ui.iconFiles.hide()
-            self.main_ui.listFiles.show()
-
-
-    def previousDir(self):
-        # debug.info("previous directory")
-        ROOTDIR = self.main_ui.currentFolderBox.text().strip().encode('utf-8')
-        if ROOTDIR != "":
-            if os.path.exists(ROOTDIR):
-                ROOTDIRNEW = os.sep.join(ROOTDIR.split(os.sep)[:-1])
-                debug.info(ROOTDIRNEW)
-                if os.path.exists(ROOTDIRNEW):
-                    self.openDir(ROOTDIRNEW)
-                    self.messages("white", "")
-            else:
-                debug.info("No such folder!")
-
-
-    def changeDir(self):
-        ROOTDIR = self.main_ui.currentFolderBox.text().strip().encode('utf-8')
-        if ROOTDIR != "":
-            ROOTDIRNEW = os.path.abspath(os.path.expanduser(ROOTDIR))
-            if os.path.exists(ROOTDIRNEW):
-                debug.info (ROOTDIRNEW)
-                self.openDir(ROOTDIRNEW)
-                self.messages("white", "")
-            else:
-                self.messages("red","No such folder!")
-
-
-    def search(self):
-        ROOTDIR = self.main_ui.currentFolderBox.text().strip().encode('utf-8')
-        self.openDir(ROOTDIR)
-
-
-    def clearPath(self):
-        self.main_ui.currentFolderBox.clear()
-
-
-    def getSelectedFiles(self):
-        model = None
-        selectedIndexes = None
-        files =[]
-
-        if self.main_ui.iconFiles.isVisible():
-            model = self.main_ui.iconFiles.model()
-            selectedIndexes = self.main_ui.iconFiles.selectedIndexes()
-        elif self.main_ui.listFiles.isVisible():
-            model = self.main_ui.listFiles.model()
-            selectedIndexes = self.main_ui.listFiles.selectedIndexes()
-
-        for selectedIndex in selectedIndexes:
-            try:
-                filePath = os.path.abspath(str(model.filePath(selectedIndex).encode('utf-8')))
-                files.append(filePath)
-            except:
-                debug.info(str(sys.exc_info()))
-
-        files = list(OrderedDict.fromkeys(files))
-        return (model,selectedIndexes,files)
-
-
-    def openFile(self):
-        debug.info("double clicked!!!")
-
-        model, selectedIndexes, selectedFiles = self.getSelectedFiles()
-        indexes = [i for i in selectedIndexes if i.column() == 0]
-        # debug.info(indexes)
-        for index in indexes:
-            try:
-                fileInfo = model.fileInfo(index)
-                filePath = os.path.abspath(str(model.filePath(index).encode('utf-8')))
-                fileName = str(model.fileName(index).encode('utf-8'))
-                debug.info(filePath)
-                debug.info(fileName)
-
-                if fileInfo.isDir():
-                    debug.info("This is a directory!")
-                    self.main_ui.searchBox.clear()
-                    self.openDir(filePath)
-
-                if fileInfo.isFile():
-                    debug.info("This is a file!")
-                    try:
-                        suffix = pathlib.Path(fileName).suffix.split('.')[-1]
-                        debug.info(suffix)
-                        openCmd = ""
-                        if suffix in mimeTypes["video"]:
-                            openCmd = mimeTypesOpenCmds["video"].format(os.path.join(projDir,"video-input.conf"),filePath)
-                        elif suffix in mimeTypes["audio"]:
-                            openCmd = mimeTypesOpenCmds["audio"].format(filePath)
-                        elif (suffix in mimeTypes["image"]):
-                            # openCmd = projDir+os.sep+"mediaPlayer.py --path '{0}' ".format(filePath)
-                            openCmd = mimeTypesOpenCmds["image"].format(os.path.join(projDir,"image-input.conf"),filePath)
-                            # openCmd = "pureref \"{0}\" ".format(filePath)
-                        elif suffix in mimeTypes["text"]:
-                            openCmd = mimeTypesOpenCmds["text"].format(filePath)
-                        elif suffix == "pdf":
-                            openCmd = mimeTypesOpenCmds["pdf"].format(filePath)
-
-                        debug.info(shlex.split(openCmd))
-                        if openCmd:
-                            subprocess.Popen(shlex.split(openCmd))
-                    except:
-                        debug.info(str(sys.exc_info()))
-            except:
-                debug.info(str(sys.exc_info()))
-
-
-    def popUpFiles(self,context,pos):
-        clip = QtWidgets.QApplication.clipboard()
-        pasteUrls = clip.mimeData().urls()
-
-        menu = QtWidgets.QMenu()
-        self.setStyle(menu)
-
-        # REMINDER : DO NOT ADD OPEN WITH ACTION
-
-        copyAction = menu.addAction("Copy")
-        cutAction = menu.addAction("Cut")
-        pasteAction = menu.addAction("Paste")
-        newFolderAction = menu.addAction("New Folder")
-        addToFavAction = menu.addAction("Add To Favourites")
-        renameAction = menu.addAction("Rename")
-        deleteAction = menu.addAction("Delete")
-        detailsAction = menu.addAction("Details")
-
-        model,selectedIndexes,selectedFiles = self.getSelectedFiles()
-        action = menu.exec_(context.mapToGlobal(pos))
-
-
-        if (action == copyAction):
-            if (selectedFiles):
-                self.copyFiles()
-        if (action == cutAction):
-            if (selectedFiles):
-                self.cutFiles()
-        if (action == pasteAction):
-            self.pasteFiles(pasteUrls)
-        if (action == newFolderAction):
-            self.createNewFolder()
-        if (action == addToFavAction):
-            if (selectedFiles):
-                self.addToFavourites()
-        if (action == renameAction):
-            if (selectedFiles):
-                self.renameUi()
-        if (action == deleteAction):
-            if (selectedFiles):
-                self.deleteFiles()
-        if (action == detailsAction):
-            if (selectedFiles):
-                self.showDetails()
-
-
-    def copyFiles(self):
-        global cutFile
-        cutFile = False
-        currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
-
-        permitted = False
-        for x in cutCopyPermittedDirs:
-            if x in currDir:
-                permitted = True
-        if permitted:
-            model,selectedIndexes,selectedFiles = self.getSelectedFiles()
-            urlList = []
-            mimeData = QtCore.QMimeData()
-            for x in selectedFiles:
-                debug.info("Copied "+x)
-                urlList.append(QtCore.QUrl().fromLocalFile(x))
-            mimeData.setUrls(urlList)
-            QtWidgets.QApplication.clipboard().setMimeData(mimeData)
-        else:
-            debug.info("Error! No permission to copy.")
-            self.messages("red", "Error! No permission to copy.")
-
-
-    def cutFiles(self):
-        global cutFile
-        self.copyFiles()
-        cutFile = True
-
-
-    def pasteFiles(self,urls):
-        global cutFile
-        for url in urls:
-            try:
-                sourceFile = url.toLocalFile().encode('utf-8')
-                destFolder = self.main_ui.currentFolderBox.text().strip().encode('utf-8')
-                sourceFileName = os.path.basename(sourceFile)
-                debug.info(sourceFile)
-                debug.info(sourceFileName)
-                # debug.info(destFolder)
-                if destFolder:
-                    destPath = os.path.abspath(destFolder)+"/"
-                    # debug.info(destPath)
-                    if destPath and os.path.exists(destPath):
-                        permitted = False
-                        for x in pastePermittedDirs:
-                            if x in destPath:
-                                permitted = True
-                        if permitted:
-                            if "/opt/home/bluepixels" in destPath: #REMINDER : Do NOT remove this code.
-                                debug.info("Danger Zone: Can not paste")
-                                return
-                            else:
-                                if os.path.exists(destPath+sourceFileName):
-                                    debug.info("File already exists")
-                                    self.messages("red", "File already exists")
-                                else:
-                                    pasteCmd = ""
-                                    rmDirCmd = ""
-                                    if cutFile:
-                                        pasteCmd = "rsync --remove-source-files -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
-                                        rmDirCmd = "rmdir \"{0}\" ".format(sourceFile)
-                                    else:
-                                        pasteCmd = "rsync -azHXW --info=progress2 \"{0}\" \"{1}\" ".format(sourceFile,destPath)
-                                    debug.info(pasteCmd)
-                                    self.messages("green", "Copying "+sourceFile)
-                                    p = subprocess.Popen(shlex.split(pasteCmd),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,bufsize=1, universal_newlines=True)
-                                    for line in iter(p.stdout.readline, b''):
-                                        synData = (tuple(filter(None, line.strip().split(' '))))
-                                        if synData:
-                                            prctg = synData[1].split("%")[0]
-                                            # debug.info(prctg)
-                                            self.main_ui.progressBar.show()
-                                            self.main_ui.progressBar.setValue(int(prctg))
-                                    subprocess.Popen(shlex.split("sync"))
-                                    if rmDirCmd:
-                                        try:
-                                            subprocess.Popen(shlex.split(rmDirCmd))
-                                        except:
-                                            debug.info(str(sys.exc_info()))
-                        else:
-                            debug.info("Danger Zone: Can not paste")
-                            debug.info("Error! No permission to paste.")
-                            self.messages("red", "Error! No permission to paste.")
-                self.main_ui.progressBar.hide()
-                # messages(self.main_ui, "white", "")
-            except:
-                debug.info(str(sys.exc_info()))
-
-
-    def createNewFolder(self):
-        self.clearInfoFrame()
-        self.main_ui.v_splitter1.setSizes([100, 140])
-        layOut = self.main_ui.infoFrame.layout()
-
-        currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
-        debug.info(currDir)
-
-        permitted = False
-        for x in newFolderPermittedDirs:
-            if x in currDir:
-                permitted = True
-        if permitted:
-            label = QtWidgets.QLabel()
-            nameLine = QtWidgets.QLineEdit()
-            createButton = QtWidgets.QPushButton()
-            cancelButton = QtWidgets.QPushButton()
-            vSpacer = QtWidgets.QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-            layOut.addWidget(label, 1, 0, 1, 2)
-            layOut.addWidget(nameLine, 2, 0, 1, 2)
-            layOut.addWidget(cancelButton, 3, 0)
-            layOut.addWidget(createButton, 3, 1)
-            layOut.addItem(vSpacer)
-            self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.ClickFocus)
-            self.main_ui.searchBox.setFocus()
-            nameLine.setFocusPolicy(QtCore.Qt.StrongFocus)
-            nameLine.setFocus()
-            label.setStyleSheet(''' font-size: 20px; ''')
-            label.setAlignment(QtCore.Qt.AlignCenter)
-            label.setText("<b>Create New Folder</b>")
-            nameLine.setText("New_Folder")
-            cancelButton.setText("Cancel")
-            createButton.setText("Create")
-            self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
-            createButton.setShortcut(QtGui.QKeySequence("Return"))
-            cancelButton.setShortcut(QtGui.QKeySequence("Escape"))
-            createButton.clicked.connect(lambda x, line=nameLine: self.addFolder(line))
-            cancelButton.clicked.connect(self.clearInfoFrame)
-        else:
-            debug.info("Danger Zone: Can not create new folder")
-            debug.info("Error! No permission to create new folder.")
-            self.messages("red", "Error! No permission to create new folder.")
-            self.clearInfoFrame()
-            return
-
-
-    def addFolder(self, line):
-        debug.info(line.text())
-
-        currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
-        debug.info(currDir)
-
-        newFolderName = str(line.text()).strip()
-        dirs = [x for x in os.listdir(currDir) if not x.startswith(".") and os.path.isdir(os.path.join(currDir, x))]
-        debug.info(dirs)
-        for i in range(1,100):
-            if newFolderName in dirs:
-                newFolderName += "_"+str(i)
-            else:
-                break
-
-        newFolder = currDir + os.sep + newFolderName
-        newFolderCmd = "mkdir \"{0}\" ".format(newFolder)
-        debug.info(newFolderCmd)
+            # thumb.setIcon(QtGui.QIcon(os.path.join(projDir, "imageFiles", "new_icons", "folder-other.svg")))
+            thumb.setIcon(QtGui.QIcon(icon_paths["folder"]))
+
+        thumb.setFocusPolicy(Qt.NoFocus)
+        thumb.setStyleSheet(''' QPushButton { text-align: left; } ''')
+        # thumb.setStyleSheet(''' QPushButton { text-align: left; border-style: transparent; padding-left: 8px; }
+        #                                     QPushButton:hover { border: 1px solid #3daee9; } ''')
+
+        enter_button = QtWidgets.QPushButton()
+        enter_button.setFocusPolicy(Qt.NoFocus)
+        enter_button.hide()
+
+        thumb.clicked.connect(lambda x, mu=main_ui, dir_path=value: open_dir(mu, dir_path=dir_path))
+        enter_button.clicked.connect(lambda x, mu=main_ui, button=thumb, editor=line, eb=enter_button: change_fav_name(mu, button, editor, eb))
+
+        thumb.setContextMenuPolicy(Qt.CustomContextMenu)
+        thumb.customContextMenuRequested.connect(lambda x, mu=main_ui, button=thumb, editor=line, eb=enter_button: favourites_popup(mu, button, editor, eb, x))
+
+        h_layout.addWidget(thumb)
+        h_layout.addWidget(line)
+        h_layout.addWidget(enter_button)
+        frame.setLayout(h_layout)
+
+        main_ui.favourites.setIndexWidget(item.index(), frame)
+
+
+def favourites_popup(main_ui, button, editor, enter_button, pos):
+    global places
+    curr_name = button.text()
+    # editorName = editor.text()
+    debug.info(curr_name)
+    # debug.info(editorName)
+
+    menu = QMenu()
+    # self.setStyle(menu)
+    set_style(menu)
+    rename_action = menu.addAction(QtGui.QIcon(icon_paths["rename"]), "Rename")
+    remove_action = menu.addAction(QtGui.QIcon(icon_paths["remove"]), "Remove")
+    # action = menu.exec_(context.mapToGlobal(pos))
+    action = menu.exec(button.mapToGlobal(pos))
+
+    if action == rename_action:
+        main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
+        enter_button.setShortcut(QtGui.QKeySequence("Return"))
+        button.hide()
+        editor.show()
+        enter_button.show()
+        editor.setFocus()
+
+    if action == remove_action:
+        places.pop(curr_name)
+        with open(favourites_conf_file, 'w') as conf_file:
+            json.dump(places, conf_file, sort_keys=True, indent=4)
+        init_config()
+        load_favourites(main_ui)
+
+
+def change_fav_name(main_ui, button, editor, enter_button):
+    curr_name = button.text()
+    new_name = editor.text()
+    debug.info(curr_name)
+    debug.info(new_name)
+
+    if new_name == curr_name:
+        debug.info("no changes found in name")
+    else:
+        for key, value in places.items():
+            if key == curr_name:
+                places[new_name] = value
+                places.pop(key)
+                with open(favourites_conf_file, 'w') as conf_file:
+                    json.dump(places, conf_file, sort_keys=True, indent=4)
+                init_config()
+                load_favourites(main_ui)
+
+    button.show()
+    editor.hide()
+    enter_button.hide()
+    editor.clearFocus()
+    main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
+    enter_button.setShortcut(QtGui.QKeySequence(""))
+
+
+def set_dir(main_ui, root_dir_new):
+    clear_all_selection()
+    # debug.info(type(ROOTDIRNEW))
+    if "/blueprod/STOR" in root_dir_new:
+        debug.info("Danger zone")
+        # main_ui.treeDirs.itemsExpandable = False
+        # main_ui.treeDirs.collapseAll()
+    else:
+        # self.messages("green","Generating thumbnails")
+        # main_ui.treeDirs.itemsExpandable = True
+        model_dirs = FSM(parent=main_ui)
+        # modelDirs.setIconProvider(IconProvider())
+        # modelDirs.setIconProvider(CustomIconProvider())
+        model_dirs.setFilter(QtCore.QDir.Dirs | QtCore.QDir.NoDotAndDotDot)
+        model_dirs.setRootPath(root_dir_new)
+
+        # main_ui.treeDirs.setModel(modelDirs)
+
+        # main_ui.treeDirs.hideColumn(1)
+        # main_ui.treeDirs.hideColumn(2)
+        # main_ui.treeDirs.hideColumn(3)
+
+        # rootIdx = modelDirs.index(ROOTDIRNEW)
+        # main_ui.treeDirs.setRootIndex(rootIdx)
+
+        # openDir(ROOTDIRNEW, main_ui)
+        return model_dirs
+
+
+def open_dir(main_ui, dir_path=""):
+    global current_list_files
+
+    if not os.path.exists(dir_path):
+        messages(main_ui, "red", "Error! Path not found.")
+        return
+
+    clear_all_selection()
+    open_list_dir(main_ui, dir_path)
+    open_icon_dir(main_ui, dir_path)
+
+    # main_ui.pathBox.setText(dir_path)
+
+    curr_dir_path = str(dir_path)
+    curr_dir_name = str(curr_dir_path.split(os.sep)[-1])
+    curr_tab_index = main_ui.tabWidget.currentIndex()
+    # debug.info(currTabIndex)
+    # openTabs[currTabIndex] = {currDirName:currDirPath}
+
+    main_ui.tabWidget.setTabText(curr_tab_index, curr_dir_name)
+    main_ui.tabWidget.setTabToolTip(curr_tab_index, curr_dir_path)
+    try:
+        current_list_files.setColumnWidth(0, 660)
+        # main_ui.currentFolderBox.clear()
+        # main_ui.currentFolderBox.setText(currDirPath)
+    except:
+        debug.info(str(sys.exc_info()))
+
+    # worker = Worker(gen_thumb, dir_path=dir_path)
+    # # self.threadpool.start(worker)
+    # worker.start()
+    # worker.wait()
+
+    gen_thumb_thread = GenThumbThread(dir_path=dir_path, parent=app)
+    # gen_thumb_thread.result.connect(lambda d, mu=main_ui: after_video_download(mu, d))
+    # gen_thumb_thread.progress.connect(lambda u, mu=main_ui: update_download_progress(mu, u))
+    gen_thumb_thread.finished.connect(lambda x: thumb_gen_finished(x))
+    threads.append(gen_thumb_thread)
+    gen_thumb_thread.start()
+
+
+def open_list_dir(main_ui, dir_path=""):
+    global CUR_DIR_SELECTED
+    global current_icon_files
+    global current_list_files
+
+    CUR_DIR_SELECTED = dir_path.strip()
+    debug.info(CUR_DIR_SELECTED)
+
+    search_term = main_ui.searchBox.text().strip()
+    # debug.info(search_term)
+
+    permitted = True
+    for x in dirPermissions["prohibitedDirs"]:
+        if x in CUR_DIR_SELECTED:
+            permitted = False
+    if permitted:
+        # self.messages("green", "Generating thumbnails")
+        # main_ui.treeDirs.itemsExpandable = True
+        main_ui.currentFolderBox.clear()
+        main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
+
+        model_files = FSM(parent=main_ui)
+        # model_files.setIconProvider(IconProvider())
         try:
-            subprocess.Popen(shlex.split(newFolderCmd))
+            current_list_files.setModel(model_files)
         except:
             debug.info(str(sys.exc_info()))
-        self.clearInfoFrame()
+        model_files.setRootPath(CUR_DIR_SELECTED)
+
+        model_files.setFilter(QtCore.QDir.Dirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
+        model_files.setNameFilters([search_term+"*"])
+        model_files.setNameFilterDisables(False)
+        debug.info(model_files.nameFilters())
+
+        root_index = model_files.index(CUR_DIR_SELECTED)
+        try:
+            current_list_files.setRootIndex(root_index)
+            current_list_files.setItemDelegateForColumn(3, DateFormatDelegate())
+        except:
+            debug.info(str(sys.exc_info()))
+        return
+    else:
+        debug.info("Danger zone")
+        debug.info("Error! No permission to open.")
+        messages(main_ui, "red", "Error! No permission to open.")
+        # main_ui.treeDirs.itemsExpandable = False
+        # main_ui.treeDirs.collapseAll()
+        return
 
 
-    def clearInfoFrame(self):
-        self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
-        self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.main_ui.searchBox.setFocus()
-        # self.main_ui.v_splitter1.setSizes([100, 140])
-        layOut = self.main_ui.infoFrame.layout()
-        if layOut:
-            try:
-                for i in reversed(range(layOut.count())):
-                    widget = layOut.takeAt(i).widget()
-                    if widget is not None:
-                        widget.setParent(None)
-            except:
-                debug.info(str(sys.exc_info()))
+def open_icon_dir(main_ui, dir_path=""):
+    global CUR_DIR_SELECTED
+    global current_icon_files
+    global current_list_files
+
+    CUR_DIR_SELECTED = dir_path.strip()
+    debug.info(CUR_DIR_SELECTED)
+
+    search_term = main_ui.searchBox.text().strip()
+    # debug.info(search_term)
+
+    permitted = True
+    for x in dirPermissions["prohibitedDirs"]:
+        if x in CUR_DIR_SELECTED:
+            permitted = False
+    if permitted:
+        # self.messages("green", "Generating thumbnails")
+        # main_ui.treeDirs.itemsExpandable = True
+        main_ui.currentFolderBox.clear()
+        main_ui.currentFolderBox.setText(CUR_DIR_SELECTED)
+
+        model_files = FSM(parent=main_ui)
+        # model_files.setIconProvider(IconProvider())
+        try:
+            current_icon_files.setModel(model_files)
+        except:
+            debug.info(str(sys.exc_info()))
+        model_files.setRootPath(CUR_DIR_SELECTED)
+
+        model_files.setFilter(QtCore.QDir.Dirs | QtCore.QDir.Files | QtCore.QDir.NoDotAndDotDot)
+        model_files.setNameFilters([search_term + "*"])
+        model_files.setNameFilterDisables(False)
+        debug.info(model_files.nameFilters())
+
+        root_index = model_files.index(CUR_DIR_SELECTED)
+        try:
+            current_icon_files.setRootIndex(root_index)
+        except:
+            debug.info(str(sys.exc_info()))
+        return
+    else:
+        debug.info("Danger zone")
+        debug.info("Error! No permission to open.")
+        messages("red", "Error! No permission to open.")
+        # main_ui.treeDirs.itemsExpandable = False
+        # main_ui.treeDirs.collapseAll()
+        return
 
 
-    def addToFavourites(self):
-        global places
-        # currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
-        model, selectedIndexes, selectedFiles = self.getSelectedFiles()
-
-        indexes = [i for i in selectedIndexes if i.column() == 0]
-        for index in indexes:
-            try:
-                fileInfo = model.fileInfo(index)
-                fileName = (str(model.fileName(index).encode('utf-8')).capitalize())
-                filePath = os.path.abspath(str(model.filePath(index).encode('utf-8')))
-                if fileInfo.isDir():
-                    places[fileName] = filePath
-                    with open(confFile, 'w') as conf_file:
-                        json.dump(places, conf_file, sort_keys=True, indent=4)
-                    self.initConfig()
-                    self.loadFavourites()
-            except:
-                debug.info(str(sys.exc_info()))
+# def dirSelected(self, index, model):
+#     dir_path = model.filePath(index)
+#     open_dir(dir_path)
 
 
-    def renameUi(self):
-        self.clearInfoFrame()
-        self.main_ui.v_splitter1.setSizes([100, 140])
-        layOut = self.main_ui.infoFrame.layout()
+def clear_all_selection():
+    global current_icon_files
+    global current_list_files
 
-        currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
-        model, selectedIndexes, selectedFiles = self.getSelectedFiles()
+    try:
+        current_icon_files.clearSelection()
+        current_list_files.clearSelection()
+    except:
+        debug.info(str(sys.exc_info()))
+    debug.info("Cleared Selection")
 
-        fileDets = {}
-        permitted = False
-        for x in renamePermittedDirs:
-            if x in currDir:
-                permitted = True
-        if permitted:
-            indexes = [i for i in selectedIndexes if i.column() == 0]
-            for index in indexes:
+
+def change_view(main_ui):
+    global current_icon_files
+    global current_list_files
+    global current_view
+
+    clear_all_selection()
+    if current_view == "LIST":
+        main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["list"]))
+        current_view = "ICON"
+        current_icon_files.show()
+        current_list_files.hide()
+    elif current_view == "ICON":
+        main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["icons"]))
+        current_view = "LIST"
+        current_icon_files.hide()
+        current_list_files.show()
+
+    # if currIconFiles.isHidden():
+    #     main_ui.changeViewButt.setIcon(QtGui.QIcon(self.listIcon))
+    #     currIconFiles.show()
+    #     currListFiles.hide()
+    # else:
+    #     main_ui.changeViewButt.setIcon(QtGui.QIcon(self.iconsIcon))
+    #     currIconFiles.hide()
+    #     currListFiles.show()
+
+
+def previous_dir(main_ui):
+    # debug.info("previous directory")
+    ROOTDIR = main_ui.currentFolderBox.text().strip()
+    if ROOTDIR != "":
+        if os.path.exists(ROOTDIR):
+            ROOTDIRNEW = os.sep.join(ROOTDIR.split(os.sep)[:-1])
+            debug.info(ROOTDIRNEW)
+            if os.path.exists(ROOTDIRNEW):
+                open_dir(main_ui, dir_path=ROOTDIRNEW)
+                messages(main_ui, "white", "")
+        else:
+            debug.info("No such folder!")
+
+
+def change_dir(main_ui):
+    ROOTDIR = main_ui.currentFolderBox.text().strip()
+    if ROOTDIR != "":
+        ROOTDIRNEW = os.path.abspath(os.path.expanduser(ROOTDIR))
+        if os.path.exists(ROOTDIRNEW):
+            debug.info (ROOTDIRNEW)
+            open_dir(main_ui, dir_path=ROOTDIRNEW)
+            messages(main_ui, "white", "")
+        else:
+            messages(main_ui, "red", "Folder not found!")
+
+
+def search(main_ui):
+    ROOTDIR = main_ui.currentFolderBox.text().strip()
+    open_dir(main_ui, dir_path=ROOTDIR)
+
+
+def clearPath(self):
+    main_ui.currentFolderBox.clear()
+
+
+def get_selected_files():
+    global current_icon_files
+    global current_list_files
+
+    model = None
+    selected_indexes = None
+    all_files = []
+
+    if current_icon_files.isVisible():
+        model = current_icon_files.model()
+        selected_indexes = current_icon_files.selectedIndexes()
+    elif current_list_files.isVisible():
+        model = current_list_files.model()
+        selected_indexes = current_list_files.selectedIndexes()
+
+    for selected_index in selected_indexes:
+        try:
+            file_abs_path = os.path.abspath(str(model.filePath(selected_index)))
+            all_files.append(file_abs_path)
+        except:
+            debug.info(str(sys.exc_info()))
+
+    all_files = list(OrderedDict.fromkeys(all_files))
+    return model, selected_indexes, all_files
+
+
+def open_file(main_ui):
+    debug.info("double clicked!!!")
+
+    model, selected_indexes, selected_files = get_selected_files()
+    indexes = [i for i in selected_indexes if i.column() == 0]
+    # debug.info(indexes)
+    for index in indexes:
+        try:
+            file_info = model.fileInfo(index)
+            file_abs_path = os.path.abspath(str(model.filePath(index)))
+            file_name = str(model.fileName(index))
+            debug.info(file_abs_path)
+            debug.info(file_name)
+
+            if file_info.isDir():
+                debug.info("This is a directory!")
+                main_ui.searchBox.clear()
+                open_dir(main_ui, dir_path=file_abs_path)
+
+            if file_info.isFile():
+                debug.info("This is a file!")
                 try:
-                    fileName = (str(model.fileName(index).encode('utf-8')))
-                    filePath = os.path.abspath(str(model.filePath(index).encode('utf-8')))
-                    fileDets[fileName] = filePath
+                    suffix = pathlib.Path(file_name).suffix.split('.')[-1]
+                    debug.info(suffix)
+                    open_command = ""
+                    if suffix in mimeTypes["video"]:
+                        open_command = mimeTypesOpenCmds["video"].format(os.path.join(projDir,"video-input.conf"), file_abs_path)
+                    elif suffix in mimeTypes["audio"]:
+                        open_command = mimeTypesOpenCmds["audio"].format(file_abs_path)
+                    elif suffix in mimeTypes["image"]:
+                        # openCmd = projDir+os.sep+"mediaPlayer.py --path '{0}' ".format(filePath)
+                        open_command = mimeTypesOpenCmds["image"].format(os.path.join(projDir,"image-input.conf"), file_abs_path)
+                        # openCmd = "pureref \"{0}\" ".format(filePath)
+                    elif suffix in mimeTypes["text"]:
+                        open_command = mimeTypesOpenCmds["text"].format(file_abs_path)
+                    elif suffix == "pdf":
+                        open_command = mimeTypesOpenCmds["pdf"].format(file_abs_path)
+                    elif suffix == "pur":
+                        open_command = mimeTypesOpenCmds["pureref"].format(file_abs_path)
+
+                    debug.info(shlex.split(open_command))
+                    if open_command:
+                        subprocess.Popen(shlex.split(open_command))
                 except:
                     debug.info(str(sys.exc_info()))
-            debug.info(fileDets)
+        except:
+            debug.info(str(sys.exc_info()))
+
+
+def files_popup(main_ui, context, pos):
+    clip = QtWidgets.QApplication.clipboard()
+    paste_urls = clip.mimeData().urls()
+
+    menu = QtWidgets.QMenu()
+    # self.setStyle(menu)
+    set_style(menu)
+
+    model, selected_indexes, selected_files = get_selected_files()
+
+    open_with_cmd_actions = {}
+
+    if len(selected_files) == 1:
+        if os.path.isfile(selected_files[0]):
+            debug.info("Eligible for open with")
+            open_action = menu.addAction("Open")
+            open_with_menu = QtWidgets.QMenu("Open With")
+            # self.setStyle(openWithMenu)
+            set_style(open_with_menu)
+
+            file_name = str(model.fileName(selected_indexes[0]))
+            suffix = pathlib.Path(file_name).suffix.split('.')[-1]
+            debug.info(suffix)
+            for fileType in mimeTypes.keys():
+                if suffix in mimeTypes[fileType]:
+                    if fileType in mimeTypesOpenWithCmds.keys():
+                        mime_softs = [i for i in mimeTypesOpenWithCmds[fileType].keys()]
+                        debug.info(mime_softs)
+                        for soft in mime_softs:
+                            open_with_cmd_actions[open_with_menu.addAction(soft)] = mimeTypesOpenWithCmds[fileType][soft].format(selected_files[0])
+
+            debug.info(open_with_cmd_actions)
+
+            menu.addMenu(open_with_menu)
+
+    copy_action = menu.addAction(QtGui.QIcon(icon_paths["copy"]), "Copy")
+    cut_action = menu.addAction(QtGui.QIcon(icon_paths["cut"]), "Cut")
+    paste_action = menu.addAction(QtGui.QIcon(icon_paths["paste"]), "Paste")
+    new_folder_action = menu.addAction(QtGui.QIcon(icon_paths["new_folder"]), "New Folder")
+    add_to_fav_action = menu.addAction(QtGui.QIcon(icon_paths["add_favourites"]), "Add To Favourites")
+    rename_action = menu.addAction(QtGui.QIcon(icon_paths["rename"]), "Rename")
+    delete_action = menu.addAction(QtGui.QIcon(icon_paths["delete"]), "Delete")
+    details_action = menu.addAction(QtGui.QIcon(icon_paths["details"]), "Details")
+
+    action = menu.exec(context.mapToGlobal(pos))
+
+    try:
+        if action == open_action:
+            if selected_files:
+                open_file(main_ui)
+    except:
+        debug.info(str(sys.exc_info()))
+
+    try:
+        if action in open_with_cmd_actions.keys():
+            if selected_files:
+                run_command = open_with_cmd_actions[action]
+                debug.info(run_command)
+                subprocess.Popen(shlex.split(run_command))
+    except:
+        debug.info(str(sys.exc_info()))
+
+    if action == copy_action:
+        if selected_files:
+            copy_files(main_ui)
+    if action == cut_action:
+        if selected_files:
+            cut_files(main_ui)
+    if action == paste_action:
+        paste_files(main_ui, paste_urls)
+    if action == new_folder_action:
+        create_new_folder(main_ui)
+    if action == add_to_fav_action:
+        if selected_files:
+            add_to_favourites(main_ui)
+    if action == rename_action:
+        if selected_files:
+            rename_ui(main_ui)
+    if action == delete_action:
+        if selected_files:
+            delete_files(main_ui)
+    if action == details_action:
+        if selected_files:
+            show_details(main_ui)
+
+
+def copy_files(main_ui):
+    global cutFile
+    cutFile = False
+    current_dir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
+
+    permitted = False
+    for x in dirPermissions["cutCopyPermittedDirs"]:
+        if x in current_dir:
+            permitted = True
+    if permitted:
+        model, selected_indexes, selected_files = get_selected_files()
+        url_list = []
+        mime_data = QtCore.QMimeData()
+        for x in selected_files:
+            debug.info("Copied "+x)
+            url_list.append(QtCore.QUrl().fromLocalFile(x))
+        mime_data.setUrls(url_list)
+        QtWidgets.QApplication.clipboard().setMimeData(mime_data)
+    else:
+        debug.info("Error! No permission to copy.")
+        messages(main_ui, "red", "Error! No permission to copy.")
+
+
+def cut_files(main_ui):
+    global cutFile
+    copy_files(main_ui)
+    cutFile = True
+
+
+def paste_files(main_ui, urls):
+    global cutFile
+    for url in urls:
+        try:
+            source_file = url.toLocalFile()
+            dest_folder = main_ui.currentFolderBox.text().strip()
+            source_file_name = os.path.basename(source_file)
+            debug.info(source_file)
+            debug.info(source_file_name)
+            # debug.info(destFolder)
+            if dest_folder:
+                dest_path = os.path.abspath(dest_folder)+"/"
+                # debug.info(destPath)
+                if dest_path and os.path.exists(dest_path):
+                    debug.info(dest_path)
+                    permitted = False
+                    for x in dirPermissions["pastePermittedDirs"]:
+                        if x in dest_path:
+                            permitted = True
+                    if permitted:
+                        if "/opt/home/bluepixels" in dest_path: #REMINDER : Do NOT remove this code.
+                            debug.info("Danger Zone: Can not paste")
+                            return
+                        else:
+                            if os.path.exists(dest_path+source_file_name):
+                                debug.info("File already exists")
+                                messages(main_ui, "red", "File already exists")
+                            else:
+                                remove_source_files=False
+                                if cutFile:
+                                    remove_source_files=True
+                                messages(main_ui, "green", "Copying " + source_file)
+                                main_ui.progressBar.show()
+                                main_ui.progressBar.setValue(0)
+                                file_copy_thread = RsyncThread(source_file, dest_path, parent=app, remove_source_files=remove_source_files)
+                                file_copy_thread.progress_updated.connect(lambda progress, mu=main_ui, source=source_file: update_progress(mu, progress, source))
+                                # file_copy_thread.finished.connect(self.copy_finished)
+                                file_copy_thread.finished.connect(lambda mu=main_ui, source=source_file, cut_file=cutFile: copy_finished(mu, source, cut_file=cut_file))
+                                file_copy_thread.start()
+
+                                if cutFile:
+                                    rm_dir_cmd = "rmdir \"{0}\" ".format(source_file)
+                                    try:
+                                        subprocess.Popen(shlex.split(rm_dir_cmd))
+                                    except:
+                                        debug.info(str(sys.exc_info()))
+
+                    else:
+                        debug.info("Danger Zone: Can not paste")
+                        debug.info("Error! No permission to paste.")
+                        messages(main_ui, "red", "Error! No permission to paste.")
+        except:
+            debug.info(str(sys.exc_info()))
+
+
+def update_progress(main_ui, progress, source):
+    debug.info(progress)
+    main_ui.progressBar.show()
+    messages(main_ui, "green", "Copying " + source)
+    main_ui.progressBar.setValue(int(progress))
+
+
+def copy_finished(main_ui, source, cut_file=False):
+    main_ui.progressBar.hide()
+    subprocess.Popen(shlex.split("sync"))
+    messages(main_ui, "green", "Finished copying")
+
+    if cut_file:
+        rm_dir_cmd = "rmdir \"{0}\" ".format(source)
+        try:
+            subprocess.Popen(shlex.split(rm_dir_cmd))
+        except:
+            debug.info(str(sys.exc_info()))
+
+
+def create_new_folder(main_ui):
+    clear_info_frame(main_ui)
+    main_ui.splitter01.setSizes([100, 140])
+    layout = main_ui.infoFrame.layout()
+
+    current_dir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
+    debug.info(current_dir)
+
+    permitted = False
+    for x in dirPermissions["newFolderPermittedDirs"]:
+        if x in current_dir:
+            permitted = True
+    if permitted:
+        label = QtWidgets.QLabel()
+        name_line = QtWidgets.QLineEdit()
+        create_button = QtWidgets.QPushButton()
+        cancel_button = QtWidgets.QPushButton()
+        v_spacer = QtWidgets.QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        layout.addWidget(label, 1, 0, 1, 2)
+        layout.addWidget(name_line, 2, 0, 1, 2)
+        layout.addWidget(cancel_button, 3, 0)
+        layout.addWidget(create_button, 3, 1)
+        layout.addItem(v_spacer)
+        main_ui.searchBox.setFocusPolicy(QtCore.Qt.ClickFocus)
+        main_ui.searchBox.setFocus()
+        name_line.setFocusPolicy(QtCore.Qt.StrongFocus)
+        name_line.setFocus()
+        # label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
+        label.setAlignment(QtCore.Qt.AlignCenter)
+        label.setText("<b>Create New Folder</b>")
+        name_line.setText("New_Folder")
+        cancel_button.setText("Cancel")
+        create_button.setText("Create")
+        main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
+        create_button.setShortcut(QtGui.QKeySequence("Return"))
+        cancel_button.setShortcut(QtGui.QKeySequence("Escape"))
+        create_button.clicked.connect(lambda f, mu=main_ui, line=name_line: add_folder(mu, line))
+        cancel_button.clicked.connect(lambda c, mu=main_ui: clear_info_frame(mu))
+    else:
+        debug.info("Danger Zone: Can not create new folder")
+        debug.info("Error! No permission to create new folder.")
+        messages(main_ui, "red", "Error! No permission to create new folder.")
+        clear_info_frame(main_ui)
+        return
+
+
+def add_folder(main_ui, line):
+    debug.info(line.text())
+
+    current_dir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
+    debug.info(current_dir)
+
+    new_folder_name = str(line.text()).strip()
+    dirs = [x for x in os.listdir(current_dir) if not x.startswith(".") and os.path.isdir(os.path.join(current_dir, x))]
+    debug.info(dirs)
+    for i in range(1,100):
+        if new_folder_name in dirs:
+            new_folder_name += "_"+str(i)
         else:
-            debug.info("Error! No permission to rename.")
-            self.messages("red", "Error! No permission to rename.")
-            self.clearInfoFrame()
-            return
-        debug.info(fileDets)
-        if (len(fileDets)) == 1:
-            for key, value in fileDets.items():
-                label = QtWidgets.QLabel()
-                nameLine = QtWidgets.QLineEdit()
-                renameButton = QtWidgets.QPushButton()
-                cancelButton = QtWidgets.QPushButton()
-                vSpacer = QtWidgets.QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-                layOut.addWidget(label, 1, 0, 1, 2)
-                layOut.addWidget(nameLine, 2, 0, 1, 2)
-                layOut.addWidget(cancelButton, 3, 0)
-                layOut.addWidget(renameButton, 3, 1)
-                layOut.addItem(vSpacer)
-                self.main_ui.searchBox.setFocusPolicy(QtCore.Qt.ClickFocus)
-                self.main_ui.searchBox.setFocus()
-                nameLine.setFocusPolicy(QtCore.Qt.StrongFocus)
-                nameLine.setFocus()
-                label.setStyleSheet(''' font-size: 20px; ''')
-                label.setAlignment(QtCore.Qt.AlignCenter)
-                label.setText("<b>Rename</b>")
-                nameLine.setText(key)
-                nameLine.setCursorPosition(0)
-                cancelButton.setText("Cancel")
-                renameButton.setText("Rename")
-                self.main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
-                renameButton.setShortcut(QtGui.QKeySequence("Return"))
-                cancelButton.setShortcut(QtGui.QKeySequence("Escape"))
-                renameButton.clicked.connect(lambda x, line=nameLine, path=currDir, name=key: self.renameNew(line, path, name))
-                cancelButton.clicked.connect(self.clearInfoFrame)
+            break
+
+    new_folder = current_dir + os.sep + new_folder_name
+    new_folder_cmd = "mkdir \"{0}\" ".format(new_folder)
+    debug.info(new_folder_cmd)
+    try:
+        subprocess.Popen(shlex.split(new_folder_cmd))
+    except:
+        debug.info(str(sys.exc_info()))
+    clear_info_frame(main_ui)
 
 
-    def renameNew(self, line, path, name):
-        # newName = str(line.text()).strip()
-        newName = line.text().encode('utf-8').strip()
-        if os.path.exists(path+os.sep+newName):
+def clear_info_frame(main_ui):
+    main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
+    main_ui.searchBox.setFocusPolicy(QtCore.Qt.StrongFocus)
+    main_ui.searchBox.setFocus()
+    # main_ui.v_splitter1.setSizes([100, 140])
+    layout = main_ui.infoFrame.layout()
+    if layout:
+        try:
+            for i in reversed(range(layout.count())):
+                widget = layout.takeAt(i).widget()
+                if widget is not None:
+                    widget.setParent(None)
+        except:
+            debug.info(str(sys.exc_info()))
+
+
+def add_to_favourites(main_ui):
+    global places
+    # currDir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
+    model, selected_indexes, selected_files = get_selected_files()
+
+    indexes = [i for i in selected_indexes if i.column() == 0]
+    for index in indexes:
+        try:
+            file_info = model.fileInfo(index)
+            file_name = (str(model.fileName(index)).capitalize())
+            file_abs_path = os.path.abspath(str(model.filePath(index)))
+            if file_info.isDir():
+                places[file_name] = file_abs_path
+                with open(favourites_conf_file, 'w') as conf_file:
+                    json.dump(places, conf_file, sort_keys=True, indent=4)
+                init_config()
+                load_favourites(main_ui)
+        except:
+            debug.info(str(sys.exc_info()))
+
+
+def rename_ui(main_ui):
+    clear_info_frame(main_ui)
+    main_ui.splitter01.setSizes([100, 140])
+    layout = main_ui.infoFrame.layout()
+
+    current_dir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
+    model, selected_indexes, selected_files = get_selected_files()
+
+    file_dets = {}
+    permitted = False
+    for x in dirPermissions["renamePermittedDirs"]:
+        if x in current_dir:
+            permitted = True
+    if permitted:
+        indexes = [i for i in selected_indexes if i.column() == 0]
+        for index in indexes:
+            try:
+                file_name = (str(model.fileName(index)))
+                file_abs_path = os.path.abspath(str(model.filePath(index)))
+                file_dets[file_name] = file_abs_path
+            except:
+                debug.info(str(sys.exc_info()))
+        debug.info(file_dets)
+    else:
+        debug.info("Error! No permission to rename.")
+        messages(main_ui, "red", "Error! No permission to rename.")
+        clear_info_frame(main_ui)
+        return
+    debug.info(file_dets)
+    if (len(file_dets)) == 1:
+        for key, value in file_dets.items():
+            label = QtWidgets.QLabel()
+            name_line = QtWidgets.QLineEdit()
+            rename_button = QtWidgets.QPushButton()
+            cancel_button = QtWidgets.QPushButton()
+            v_spacer = QtWidgets.QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+            layout.addWidget(label, 1, 0, 1, 2)
+            layout.addWidget(name_line, 2, 0, 1, 2)
+            layout.addWidget(cancel_button, 3, 0)
+            layout.addWidget(rename_button, 3, 1)
+            layout.addItem(v_spacer)
+            main_ui.searchBox.setFocusPolicy(QtCore.Qt.ClickFocus)
+            main_ui.searchBox.setFocus()
+            name_line.setFocusPolicy(QtCore.Qt.StrongFocus)
+            name_line.setFocus()
+            # label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
+            label.setAlignment(QtCore.Qt.AlignCenter)
+            label.setText("<b>Rename</b>")
+            name_line.setText(key)
+            name_line.setCursorPosition(0)
+            cancel_button.setText("Cancel")
+            rename_button.setText("Rename")
+            main_ui.changeDirButt.setShortcut(QtGui.QKeySequence(""))
+            rename_button.setShortcut(QtGui.QKeySequence("Return"))
+            cancel_button.setShortcut(QtGui.QKeySequence("Escape"))
+            rename_button.clicked.connect(lambda r, mu=main_ui, line=name_line, path=current_dir, name=key: rename_new(mu, line, path, name))
+            cancel_button.clicked.connect(lambda c, mu=main_ui: clear_info_frame(mu))
+
+
+def rename_new(main_ui, line, path, name):
+    try:
+        new_name = line.text().strip()
+        if os.path.exists(path+os.sep+new_name):
             debug.info("Error! File Exists.")
-            self.messages("red", "Error! File Exists.")
-            self.clearInfoFrame()
+            messages(main_ui, "red", "Error! File Exists.")
+            clear_info_frame(main_ui)
             return
-        cmd = "mv \"{0}\" \"{1}\" ".format(path + os.sep + name, path + os.sep + newName)
+        cmd = "mv \"{0}\" \"{1}\" ".format(path + os.sep + name, path + os.sep + new_name)
         debug.info(cmd)
         subprocess.Popen(shlex.split(cmd))
-        self.clearInfoFrame()
+        clear_info_frame(main_ui)
+    except:
+        debug.info(str(sys.exc_info()))
 
 
-    def deleteFiles(self):
-        currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
-        debug.info(currDir)
-        permitted = False
-        for x in deletePermittedDirs:
-            if x in currDir:
-                permitted = True
-        if permitted:
-        # if "/opt/home/bluepixels/Downloads" in currDir:
-            model,selectedIndexes,selectedFiles = self.getSelectedFiles()
-            fileNames = []
-            indexes = [i for i in selectedIndexes if i.column() == 0]
-            for index in indexes:
-                try:
-                    fileName = (str(model.fileName(index).encode('utf-8')))
-                    fileNames.append(fileName)
-                except:
-                    debug.info(str(sys.exc_info()))
-            debug.info(fileNames)
-            confirm = QtWidgets.QMessageBox()
-            self.setStyle(confirm)
-            # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
-            confirm.setWindowTitle("Warning!")
-            # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
-            confirm.setIconPixmap(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png")))
-            confirm.setText("<b>Permanently Delete these item(s)?</b>"+"\n")
-            confirm.setInformativeText(",\n".join(i for i in fileNames))
-            confirm.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
-            selection = confirm.exec_()
-            if (selection == QtWidgets.QMessageBox.Yes):
-                for x in selectedFiles:
-                    # if "/opt/home/bluepixels/Downloads/" in x:
-                    removeCmd = "rm -frv \"{0}\" ".format(x)
-                    debug.info(shlex.split(removeCmd))
-                    if removeCmd:
-                        subprocess.Popen(shlex.split(removeCmd))
-                        debug.info("Deleted "+x)
-        else:
-            debug.info("Error! No permission to delete.")
-            self.messages("red","Error! No permission to delete.")
-
-
-    def showDetails(self):
-        self.clearInfoFrame()
-        self.main_ui.v_splitter1.setSizes([100, 140])
-        layOut = self.main_ui.infoFrame.layout()
-
-        label = QtWidgets.QLabel()
-        detsField = QtWidgets.QTextEdit()
-        detsField.setReadOnly(True)
-        layOut.addWidget(label, 1, 0, 1, 2)
-        layOut.addWidget(detsField, 2, 0, 1, 2)
-
-        label.setStyleSheet(''' font-size: 20px; ''')
-        label.setAlignment(QtCore.Qt.AlignCenter)
-        label.setText("<b>Properties</b>")
-
-        currDir = str(os.path.abspath(os.path.expanduser(self.main_ui.currentFolderBox.text().strip())).encode('utf-8'))
-        debug.info(currDir)
-        model, selectedIndexes, selectedFiles = self.getSelectedFiles()
-        debug.info(selectedFiles)
-
-        fileNames = []
-        indexes = [i for i in selectedIndexes if i.column() == 0]
+def delete_files(main_ui):
+    current_dir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
+    debug.info(current_dir)
+    permitted = False
+    for x in dirPermissions["deletePermittedDirs"]:
+        if x in current_dir:
+            permitted = True
+    if permitted:
+    # if "/opt/home/bluepixels/Downloads" in currDir:
+        model, selected_indexes, selected_files = get_selected_files()
+        file_names = []
+        indexes = [i for i in selected_indexes if i.column() == 0]
         for index in indexes:
-            fileName = (str(model.fileName(index).encode('utf-8')))
-            fileNames.append(fileName)
+            try:
+                file_name = (str(model.fileName(index)))
+                file_names.append(file_name)
+            except:
+                debug.info(str(sys.exc_info()))
+        debug.info(file_names)
+        confirm = QtWidgets.QMessageBox()
+        # self.setStyle(confirm)
+        set_style(confirm)
+        # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
+        confirm.setWindowTitle("Warning!")
+        # confirm.setIcon(QtGui.QIcon(QtGui.QPixmap(os.path.join(projDir, "imageFiles", "help-icon-1.png"))))
+        confirm.setIconPixmap(QtGui.QPixmap(icon_paths["help"]))
+        confirm.setText("<b>Permanently Delete these item(s)?</b>"+"\n")
+        confirm.setInformativeText(",\n".join(i for i in file_names))
+        confirm.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        selection = confirm.exec()
+        if selection == QtWidgets.QMessageBox.Yes:
+            for x in selected_files:
+                # if "/opt/home/bluepixels/Downloads/" in x:
+                remove_cmd = "rm -frv \"{0}\" ".format(x)
+                debug.info(shlex.split(remove_cmd))
+                if remove_cmd:
+                    p = subprocess.Popen(shlex.split(remove_cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    output, error = p.communicate()
+                    if p.returncode == 0:
+                        debug.info("Deleted "+x)
+                        change_dir(main_ui)
+                    else:
+                        debug.info(f"Command failed with return code: {p.returncode}")
+                    # debug.info("Deleted "+x)
+                    # self.change_dir()
+    else:
+        debug.info("Error! No permission to delete.")
+        messages(main_ui, "red", "Error! No permission to delete.")
 
-        # detsField.append("\n")
-        detsField.append("<b>Name : </b>"+", ".join(fileNames))
-        detsField.append("<b>Location : </b>" + currDir)
 
-        # allSelectedFiles = [file+"/*" for file in selectedFiles]
+def show_details(main_ui):
+    clear_info_frame(main_ui)
+    main_ui.splitter01.setSizes([100, 140])
+    layout = main_ui.infoFrame.layout()
 
-        detsCmd = ['du', '-sch']
-        for file in selectedFiles:
-            detsCmd = detsCmd + [file]
-        debug.info(detsCmd)
+    label = QtWidgets.QLabel()
+    dets_field = QtWidgets.QTextEdit()
+    dets_field.setReadOnly(True)
+    # detsField.setStyleSheet(''' border: 1px solid #76797C; ''')
+    # dets_field.setStyleSheet(''' QTextEdit { border: 1px solid #76797C; } ''')
 
-        detsField.append("<b>Items : </b>" + str(len(selectedFiles)+len(detsCmd)-2))
+    layout.addWidget(label, 1, 0, 1, 2)
+    layout.addWidget(dets_field, 2, 0, 1, 2)
 
-        sT = getSizeThread(detsCmd, app)
-        sT.result.connect(lambda x, textEdit=detsField: self.setSize(textEdit,x))
-        sT.start()
+    # label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
+    label.setAlignment(QtCore.Qt.AlignCenter)
+    label.setText("<b>Properties</b>")
+
+    current_dir = str(os.path.abspath(os.path.expanduser(main_ui.currentFolderBox.text().strip())))
+    debug.info(current_dir)
+    model, selected_indexes, selected_files = get_selected_files()
+    debug.info(selected_files)
+
+    file_names = []
+    indexes = [i for i in selected_indexes if i.column() == 0]
+    for index in indexes:
+        file_name = (str(model.fileName(index)))
+        file_names.append(file_name)
+
+    # detsField.append("\n")
+    dets_field.append("<b>Name : </b>"+", ".join(file_names))
+    dets_field.append("<b>Location : </b>" + current_dir)
+
+    # allSelectedFiles = [file+"/*" for file in selectedFiles]
+
+    dets_cmd = ['du', '-sch']
+    for file in selected_files:
+        dets_cmd = dets_cmd + ["\""+file+"\""]
+    debug.info(dets_cmd)
+
+    dets_field.append("<b>Items : </b>" + str(len(selected_files)+len(dets_cmd)-2))
+
+    s_t = GetSizeThread(dets_cmd, app)
+    s_t.result.connect(lambda x, text_edit=dets_field: set_size(text_edit, x))
+    s_t.start()
 
 
-    def setSize(self,textEdit,size):
-        textEdit.append("<b>Size : </b>"+size+"B")
+def set_size(text_edit, size):
+    text_edit.append("<b>Size : </b>"+size+"B")
 
 
-    def messages(self,color,msg):
-        self.main_ui.messages.setStyleSheet("color: %s" %color)
-        self.main_ui.messages.setText("%s"%msg)
+def messages(main_ui, color, msg):
+    main_ui.messages.setStyleSheet("color: %s" %color)
+    main_ui.messages.setText(f"{msg}")
 
 
-    def setStyle(self,ui):
-        light = os.path.join(projDir, "styleSheets", "light.qss")
-        dark = os.path.join(projDir, "styleSheets", "dark.qss")
-        theme = os.environ['HR_THEME']
-        if theme == "light":
-            theme = light
-            # os.environ['HR_THEME'] = "light"
-        else:
-            theme = dark
-            # os.environ['HR_THEME'] = "dark"
-        sS = open(theme, "r")
+def set_style(ui):
+    with open(style_sheet_path, "r") as sS:
         ui.setStyleSheet(sS.read())
-        sS.close()
 
 
-    def changeTheme(self):
-        light = os.path.join(projDir, "styleSheets", "light.qss")
-        dark = os.path.join(projDir, "styleSheets", "dark.qss")
-
-        theme = os.environ['HR_THEME']
-        if theme == "light":
-            theme = dark
-            os.environ['HR_THEME'] = "dark"
-        else:
-            theme = light
-            os.environ['HR_THEME'] = "light"
-
-        sS = open(theme, "r")
-        self.main_ui.setStyleSheet(sS.read())
-        sS.close()
+# def setStyle(self,ui):
+#     light = os.path.join(projDir, "styleSheets", "light.qss")
+#     dark = os.path.join(projDir, "styleSheets", "dark.qss")
+#     theme = os.environ['FILES_THEME']
+#     if theme == "light":
+#         theme = light
+#         # os.environ['FILES_THEME'] = "light"
+#     else:
+#         theme = dark
+#         # os.environ['FILES_THEME'] = "dark"
+#     sS = open(theme, "r")
+#     ui.setStyleSheet(sS.read())
+#     sS.close()
 
 
-    def audioRestart(self):
-        arCmd = "audio-restart"
-        debug.info(arCmd)
-        subprocess.Popen(arCmd)
+# def changeTheme(self):
+#     light = os.path.join(projDir, "styleSheets", "light.qss")
+#     dark = os.path.join(projDir, "styleSheets", "dark.qss")
+#
+#     theme = os.environ['FILES_THEME']
+#     if theme == "light":
+#         theme = dark
+#         os.environ['FILES_THEME'] = "dark"
+#         main_ui.themeButt.setIcon(QtGui.QIcon(self.lightIcon))
+#     else:
+#         theme = light
+#         os.environ['FILES_THEME'] = "light"
+#         main_ui.themeButt.setIcon(QtGui.QIcon(self.darkIcon))
+#
+#     sS = open(theme, "r")
+#     main_ui.setStyleSheet(sS.read())
+#     sS.close()
 
 
-    def blenderMediaViewer(self):
-        bmvcmd = "/proj/standard/share/blender-3.0/blender --app-template blender_media_viewer -w"
-        debug.info(bmvcmd)
-        subprocess.Popen(shlex.split(bmvcmd))
+def go_home(main_ui):
+    open_dir(main_ui, dir_path=homeDir)
 
 
-    def updateDownloadProgress(self, prctg):
-        self.main_ui.downloadProgressBar.setValue(int(prctg))
+def show_video_downloader(mu):
+    if not mu.videoDownloaderFrame.isVisible():
+        mu.videoDownloaderFrame.show()
+    else:
+        mu.videoDownloaderFrame.hide()
 
 
-    def afterVideoDownload(self, msg):
-        self.main_ui.downloadProgressBar.hide()
-        self.main_ui.urlBox.setReadOnly(False)
-        self.main_ui.pathBox.setReadOnly(False)
-        self.main_ui.cancelButt.setEnabled(False)
-        self.main_ui.downloadButt.setEnabled(True)
-        self.main_ui.downloadButt.show()
-        self.main_ui.cancelButt.hide()
-        self.messages("green", msg)
+def show_gif_converter(mu):
+    if not mu.gifConverterFrame.isVisible():
+        mu.gifConverterFrame.show()
+    else:
+        mu.gifConverterFrame.hide()
 
 
-    def downloadVideo(self):
-        link = str(self.main_ui.urlBox.text().strip()).encode('utf-8')
-        downDir = str(os.path.abspath(os.path.expanduser(self.main_ui.pathBox.text().strip())).encode('utf-8'))
-        path = str(os.path.abspath(os.path.expanduser(self.main_ui.pathBox.text().strip())).encode('utf-8'))+os.sep+"%(title)s.%(ext)s"
-        if link:
-            if os.path.exists(downDir):
-                permitted = False
-                for x in pastePermittedDirs:
-                    if x in downDir:
-                        permitted = True
-                if permitted:
-                    self.main_ui.downloadProgressBar.show()
-                    self.main_ui.urlBox.setReadOnly(True)
-                    self.main_ui.pathBox.setReadOnly(True)
-                    self.main_ui.cancelButt.setEnabled(True)
-                    self.main_ui.downloadButt.setEnabled(False)
-                    self.main_ui.downloadButt.hide()
-                    self.main_ui.cancelButt.show()
-
-                    dT = downloadVideoThread(path,link, app)
-                    dT.result.connect(lambda x : self.afterVideoDownload(x))
-                    dT.progress.connect(lambda x : self.updateDownloadProgress(x))
-                    dT.start()
-                else:
-                    debug.info("No permission to write")
-                    self.messages("red", "Not permitted!")
-            else:
-                debug.info("No such directory")
-                self.messages("red", "Folder does not exists!")
-        else:
-            debug.info("URL field is empty")
-            self.messages("red", "URL field is empty")
+def audio_restart():
+    ar_cmd = "/usr/local/bin/audio-restart"
+    debug.info(ar_cmd)
+    subprocess.Popen(ar_cmd)
 
 
-    def cancelVideoDownload(self):
-        for proc in currDownloads:
-            debug.info(proc.pid)
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+def fix_pen_display():
+    pd_cmd = "/proj/standard/share/penDisplay.py"
+    debug.info(pd_cmd)
+    subprocess.Popen(pd_cmd)
 
 
+def blender_media_viewer():
+    bmv_cmd = "/proj/standard/share/blender-3.0/blender --app-template blender_media_viewer -w"
+    debug.info(bmv_cmd)
+    subprocess.Popen(shlex.split(bmv_cmd))
 
-class downloadVideoThread(QThread):
-    progress = pyqtSignal(int)
-    result = pyqtSignal(str)
-    finished = pyqtSignal()
 
-    def __init__(self, path, link, parent):
-        super(downloadVideoThread, self).__init__(parent)
-        self.path = path
-        self.link = link
+def convert_to_gif(main_ui):
+    messages(main_ui, "white", "")
+    input_video = str(main_ui.inputVideoBox.text().strip())
+    input_video_path = os.path.abspath(input_video.replace("file://", ""))
 
-    def run(self):
-        downCmd = os.path.join(projDir,"youtube-dl")+" --external-downloader aria2c --external-downloader-args " \
-                  "'--summary-interval 1 --download-result=hide -c -s 10 -x 10 -k 1M' " \
-                  "-o \"{0}\" \"{1}\" ".format(self.path,self.link)
-        debug.info(downCmd)
+    if os.path.exists(input_video_path):
+        output_gif = str(main_ui.outputGifBox.text().strip())
+        if not output_gif.endswith('.gif'):
+            output_gif += ".gif"
+        output_gif = os.path.abspath(output_gif.replace("file://", ""))
+        output_gif_path = os.path.join(os.path.dirname(input_video_path), os.path.basename(output_gif))
+
+        main_ui.inputVideoBox.setReadOnly(True)
+        main_ui.outputGifBox.setReadOnly(True)
+        main_ui.gifConvertButt.setEnabled(False)
+
         try:
-            p = subprocess.Popen(shlex.split(downCmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                 bufsize=1,universal_newlines=True, preexec_fn=os.setsid)
-            currDownloads.append(p)
-            msg = ""
-            for line in iter(p.stdout.readline, b''):
-                debug.info(line)
-                if "Unable to download webpage" in line:
-                    msg = "Unable to download video"
-                elif "already been downloaded and merged" in line:
-                    msg = "Already been downloaded and merged"
-                elif "100%" in line:
-                    msg = "Video Downloaded"
-                elif "Unsupported URL" in line:
-                    msg = "Unsupported URL"
-                elif "looks truncated" in line:
-                    msg = "Url looks truncated"
-                elif "Unable to extract video data" in line:
-                    msg = "Unable to extract video data"
-                elif "Download aborted" in line:
-                    msg = "Download aborted"
-                elif "Redirecting to" in line:
-                    msg = "Aborted"
-                elif "%" in line:
-                    synData = (tuple(filter(None, line.strip().split('('))))
-                    if synData:
-                        prctg = synData[1].split("%")[0].strip()
-                        self.progress.emit(int(prctg))
+            for thread in gif_convert_threads:
+                thread.stop()
+                thread.quit()
+                thread.wait()
+                if thread.isFinished():
+                    thread.deleteLater()
+        except Exception as e:
+            debug.info(f"Error Stopping Threads : {e}")
+
+        gCT = GifConvertThread(input_video_path, output_gif_path, parent=app)
+        gCT.error.connect(lambda msg, color="red", mu=main_ui: messages(mu, color, msg))
+        gCT.result.connect(lambda msg, color="green", mu=main_ui: messages(mu, color, msg))
+        gCT.finished.connect(lambda mu=main_ui: after_gif_convert(mu))
+        gif_convert_threads.append(gCT)
+        gCT.start()
+
+    else:
+        debug.info("Input video does not exist.")
+        messages(main_ui, "red", "Input video does not exist.")
+        return
+
+
+def after_gif_convert(main_ui):
+    main_ui.inputVideoBox.setReadOnly(False)
+    main_ui.outputGifBox.setReadOnly(False)
+    main_ui.gifConvertButt.setEnabled(True)
+    debug.info("GIF conversion finished.")
+
+
+def update_download_progress(main_ui, percentage):
+    main_ui.downloadProgressBar.setValue(int(percentage))
+
+
+def after_video_download(main_ui, msg):
+    main_ui.downloadProgressBar.hide()
+    main_ui.urlBox.setReadOnly(False)
+    main_ui.pathBox.setReadOnly(False)
+    main_ui.cancelButt.setEnabled(False)
+    main_ui.downloadButt.setEnabled(True)
+    main_ui.downloadButt.show()
+    main_ui.cancelButt.hide()
+    messages(main_ui, "green", msg)
+
+
+def download_video(main_ui):
+    messages(main_ui, "white", "")
+    link = str(main_ui.urlBox.text().strip())
+    down_dir = str(os.path.abspath(os.path.expanduser(main_ui.pathBox.text().strip())))
+    path = str(os.path.abspath(os.path.expanduser(main_ui.pathBox.text().strip())))+os.sep+"%(title)s.%(ext)s"
+    if link:
+        if os.path.exists(down_dir):
+            permitted = False
+            for x in dirPermissions["pastePermittedDirs"]:
+                if x in down_dir:
+                    permitted = True
+            if permitted:
+                main_ui.downloadProgressBar.show()
+                main_ui.urlBox.setReadOnly(True)
+                main_ui.pathBox.setReadOnly(True)
+                main_ui.cancelButt.setEnabled(True)
+                main_ui.downloadButt.setEnabled(False)
+                main_ui.downloadButt.hide()
+                main_ui.cancelButt.show()
+
+                fhdmp4 = main_ui.fhdmp4.isChecked()
+
+                dT = DownloadVideoThread(path,link, fhdmp4, app)
+                dT.result.connect(lambda d, mu=main_ui: after_video_download(mu, d))
+                dT.progress.connect(lambda u, mu=main_ui: update_download_progress(mu, u))
+                # dT.finished.connect(lambda x : self.afterVideoDownload(x))
+                dT.start()
+            else:
+                debug.info("No permission to write")
+                messages(main_ui, "red", "Not permitted!")
+        else:
+            debug.info("No such directory")
+            messages(main_ui, "red", "Folder does not exists!")
+    else:
+        debug.info("URL field is empty")
+        messages(main_ui, "red", "URL field is empty")
+
+
+def cancel_video_download(main_ui):
+    debug.info(currDownloads)
+    for key, value in currDownloads.items():
+        try:
+            debug.info(key)
+            # os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            os.kill(key, signal.SIGTERM)
+            subprocess.run("killall aria2c", shell=True)
+
+            # TODO: Remove residuals from cancelled downloads
+            debug.info(value)
+            down_dir = os.sep.join(value.strip().split(os.sep)[:-1])
+            debug.info(down_dir)
+
+            # dirContents = os.listdir(downDir)
+            # debug.info(dirContents)
+            # for f in dirContents:
+            #     if '.part' in f:
+            #         debug.info(downDir+os.sep+f)
+            #         rmCmd = "rm -frv \"{0}\" ".format(downDir+os.sep+f)
+            #         try:
+            #             subprocess.Popen(shlex.split(rmCmd))
+            #         except:
+            #             debug.info(str(sys.exc_info()))
         except:
             debug.info(str(sys.exc_info()))
+    after_video_download(main_ui, "Cancelled")
+
+
+def thumb_gen_finished(finished_signal):
+    debug.info(finished_signal)
+    for thread in threads:
+        # if not thread.isRunning():
+        if thread.isFinished():
+            debug.info(f"Thread <{thread.name}> is finished. Deleting...")
+            thread.deleteLater()
+            threads.remove(thread)
+        # else:
+        #     debug.info(f"Thread {thread} is still running or not terminated yet.")
+
+
+def stop_threads(main_ui):
+    debug.info(threads)
+    try:
+        for thread in threads:
+            if thread.isRunning():
+                debug.info(f"Stopping thread <{thread.name}>")
+                thread.stop()
+                thread.quit()
+                thread.wait()
+                if thread.isFinished():
+                    thread.deleteLater()
+            else:
+                debug.info(f"Thread <{thread.name}> is not running")
+                if thread.isFinished():
+                    thread.deleteLater()
+            # NOTE: DO NOT Remove thread from threads
+            # threads.remove(thread)
+        debug.info("All Running Threads Stopped.")
+    except Exception as e:
+        debug.info(f"Error Stopping Threads : {e}")
+
+
+class GenThumbThread(QThread):
+    finished = Signal(str, name="finished_signal")
+    # error = Signal(str)
+    # result = Signal(str)
+
+    def __init__(self, dir_path, parent=None):
+        super().__init__(parent)
+        self.dir_path = dir_path
+        self.thumbs = thumbs
+        self._running = True
+        self.name = str(self.dir_path).replace("/", ":")
+
+    def stop(self):
+        self._running = False
+
+    def run(self):
+        all_files = [f for f in os.listdir(self.dir_path) if os.path.isfile(os.path.join(self.dir_path, f))]
+        for f in all_files:
+            # debug.info(f)
+            if not self._running:
+                break
+
+            if f.startswith("."):
+                continue
+
+            file_abs_path = os.path.join(self.dir_path, f)
+            file_extension = os.path.splitext(file_abs_path)[1].replace(".", "").strip()
+
+            # for mime_type, extensions in mimeTypes.items():
+            if file_extension in mimetype_reverse_lookup:
+                mime_types = mimetype_reverse_lookup[file_extension]
+                for mime_type in mime_types:
+                    if mime_type in mimeConvertCmds:
+                        # debug.info(file_abs_path)
+                        hex_file_path = hashlib.sha256(file_abs_path.encode()).hexdigest()
+                        # debug.info(hex_file_path)
+                        self.thumbs[file_abs_path] = hex_file_path
+                        thumb_image = os.path.join(filesThumbsDir, hex_file_path + ".jpeg")
+
+                        if not os.path.exists(thumb_image):
+                            try:
+                                gen_thumb_cmd = mimeConvertCmds[mime_type].format(file_abs_path, thumb_image)
+                                subprocess.call(shlex.split(gen_thumb_cmd))
+                            except Exception as e:
+                                debug.info(str(e))
+                    break
+
+        if self._running:
+            with open(thumbs_conf_file, 'w') as conf_file:
+                json.dump(self.thumbs, conf_file, sort_keys=True, indent=4)
+            self.finished.emit("Thumbnails Generated")
         else:
-            self.result.emit(msg)
-        finally:
-            self.finished.emit()
+            debug.info("Thread stopped before completion.")
+
+
+class RsyncThread(QThread):
+    progress_updated = Signal(int)
+    finished = Signal()
+
+    def __init__(self, source_path, destination_path, parent=None, remove_source_files=False):
+        super().__init__(parent)
+        self.source_path = source_path
+        self.destination_path = destination_path
+        self.remove_source_files = remove_source_files
+
+    @Slot()
+    def run(self):
+        rsync_command = []
+        if self.remove_source_files:
+            rsync_command = ["rsync", "--remove-source-files", "-azHXW", "--info=progress2", self.source_path, self.destination_path]
+        else:
+            rsync_command = ["rsync", "-azHXW", "--info=progress2", self.source_path, self.destination_path]
+
+        debug.info(rsync_command)
+        process = Popen(rsync_command, stdout=PIPE, stderr=STDOUT, bufsize=1, universal_newlines=True)
+
+        for line in process.stdout:
+            sync_data = (tuple(filter(None, line.strip().split(' '))))
+            # print (syn_data)
+            if sync_data:
+                percent = 0
+                try:
+                    percent = int(sync_data[1].split("%")[0])
+                    # print (percent)
+                except ValueError:
+                    debug.info(str(sys.exc_info()))
+                    percent = 0
+                self.progress_updated.emit(percent)
+
+        process.wait()
+        self.finished.emit()
+
+
+class GifConvertThread(QThread):
+    error = Signal(str)
+    result = Signal(str)
+
+    def __init__(self, input_video, output_gif, parent=None):
+        super().__init__(parent)
+        self.input_video = input_video
+        self.output_gif = output_gif
+        self._running = True
+
+    def stop(self):
+        self._running = False
+
+    @Slot()
+    def run(self):
+        if not self._running:
             return
 
+        gif_convert_cmd = [
+            'ffmpeg', '-i', self.input_video, '-vf',
+            "scale=480:-1:flags=lanczos,split[s0][s1];"
+            "[s0]palettegen=stats_mode=diff[p];"
+            "[s1][p]paletteuse=dither=bayer",
+            '-loop', '0', self.output_gif, "-y"
+        ]
 
-class getSizeThread(QThread):
-    finished = pyqtSignal()
-    result = pyqtSignal(str)
+        debug.info(gif_convert_cmd)
 
-    def __init__(self,cmd,parent):
-        super(getSizeThread, self).__init__(parent)
+        process = Popen(gif_convert_cmd, stdout=PIPE, stderr=STDOUT, bufsize=1, universal_newlines=True)
+
+        for line in process.stdout:
+            debug.info(line.strip())
+            if "Error" in line:
+                self.error.emit("Error during GIF conversion.")
+                return
+
+        process.wait()
+        self.result.emit("GIF conversion finished.")
+
+
+class DownloadVideoThread(QThread):
+    progress = Signal(int)
+    result = Signal(str)
+    finished = Signal()
+
+    def __init__(self, path, link, fhdmp4=False, parent=None):
+        super().__init__(parent)
+        self.path = path
+        self.link = link
+        self.fhdmp4 = fhdmp4
+
+    @Slot()
+    def run(self):
+        base_cmd = (
+                os.path.join(externalToolsDir, "yt-dlp_linux")
+                + " --external-downloader aria2c "
+                + " --external-downloader-args '--summary-interval 1 --download-result=hide "
+                + "-c -s 10 -x 10 -k 1M' -o \"{0}\" \"{1}\""
+        )
+        if self.fhdmp4:
+            down_cmd = base_cmd.format(self.path, self.link) + \
+                       " -f 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]'"
+        else:
+            down_cmd = base_cmd.format(self.path, self.link)
+
+        try:
+            debug.info(f"Executing command: {down_cmd}")
+
+            p = Popen(split(down_cmd), stdout=PIPE, stderr=PIPE, universal_newlines=True)
+            currDownloads[p.pid] = self.path
+
+            percentage_pattern = re.compile(r"(\d{1,3}(?:\.\d+)?)%")
+
+            for line in p.stdout:
+                if line:
+                    debug.info(line.strip())
+                    match = percentage_pattern.search(line)
+                    if match:
+                        percent = float(match.group(1))
+                        self.progress.emit(int(percent))
+                    if "has already been downloaded" in line:
+                        file_path_match = re.search(r'(?<=\s)(.*?)(?=\s*has already been downloaded)', line)
+                        if file_path_match:
+                            downloaded_video_path = file_path_match.group(0).strip()
+                            debug.info(downloaded_video_path)
+                    if "Merging formats into" in line:
+                        merge_path_match = re.search(r'Merging formats into \"(.*?)\"', line)
+                        if merge_path_match:
+                            downloaded_video_path = merge_path_match.group(1).strip()
+                            debug.info(downloaded_video_path)
+            p.stdout.close()
+            p.wait()
+
+            if p.returncode == 0 and downloaded_video_path:
+                # get_thumb_cmd = f"{os.path.join(externalToolsDir, 'yt-dlp_linux')} --get-thumbnail \"{self.link}\""
+                # thumb_link = subprocess.check_output(split(get_thumb_cmd), universal_newlines=True).strip()
+                # debug.info(thumb_link)
+
+                os.utime(downloaded_video_path, None)  # Sets the access and modification times to now
+                self.result.emit(f"Download finished: {downloaded_video_path}")
+            else:
+                error_msg = f"Download failed with return code: {p.returncode}"
+                debug.info(error_msg)
+                self.result.emit(error_msg)
+
+        except Exception as e:
+            error_msg = f"An error occurred: {str(e)}"
+            debug.info(error_msg)
+            self.result.emit(error_msg)
+
+        finally:
+            if p.pid in currDownloads:
+                del currDownloads[p.pid]
+            self.finished.emit()
+
+
+class GetSizeThread(QThread):
+    finished = Signal()
+    result = Signal(str)
+
+    def __init__(self, cmd, parent=None):
+        super().__init__(parent)
         self.cmd = cmd
 
     def run(self):
         try:
-            p = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1,
-                                 universal_newlines=True)
-            out, err = p.communicate()
-            size = out.split("\t")[-2].split("\n")[1]
-        except:
-            debug.info(str(sys.exc_info()))
-        else:
+            process = Popen(shlex.split(" ".join(self.cmd)), stdout=PIPE, stderr=STDOUT, bufsize=1,
+                            universal_newlines=True)
+            output, _ = process.communicate()
+
+            # Process the output to get the size
+            size_line = output.strip().split("\n")[-1]  # Get the last line which contains the total size
+            size = size_line.split("\t")[0]  # Assuming the size is the first part of the line
+
             self.result.emit(size)
+        except Exception as e:
+            debug.info(f"Error getting size: {e}")
         finally:
             self.finished.emit()
 
 
+def files_window(main_ui):
+    global current_icon_files
+    global current_list_files
+
+    # threadpool = QtCore.QThreadPool()
+
+    # self.loader = QUiLoader()
+    # file = QFile(main_ui_file)
+    # file.open(QFile.ReadOnly)
+    # main_ui = main_ui
+    # file.close()
+    main_ui.setWindowTitle("FILES")
+    main_ui.setWindowIcon(QtGui.QIcon(os.path.join(projDir, "icons", "folder-main.svg")))
+
+    # sS = open(os.path.join(projDir, "styleSheets", "dark.qss"), "r")
+    # main_ui.setStyleSheet(sS.read())
+    # sS.close()
+
+    with open(style_sheet_path, "r") as sS:
+        main_ui.setStyleSheet(sS.read())
+
+    # os.environ['FILES_THEME'] = "dark"
+
+    # currIconFiles = main_ui.iconFiles
+    # currListFiles = main_ui.listFiles
+
+    main_ui.pathBox.clear()
+    main_ui.pathBox.setText(places["Downloads"])
+
+    main_ui.currentFolderBox.clear()
+    main_ui.currentFolderBox.setText(ROOTDIR)
+
+    # main_ui.treeDirs.sortByColumn(0, QtCore.Qt.AscendingOrder)
+    # currListFiles.sortByColumn(0, QtCore.Qt.AscendingOrder)
+
+    root_dir_new = os.path.abspath(main_ui.currentFolderBox.text().strip())
+    debug.info(root_dir_new)
+
+    set_dir(main_ui, root_dir_new)
+
+    open_dir(main_ui, dir_path=homeDir)
+    init_config()
+    load_favourites(main_ui)
+
+    # main_ui.tabWidget.tabBarDoubleClicked.connect(self.tab_open_doubleclick)
+    # main_ui.tabWidget.customContextMenuRequested.connect(lambda x, context=main_ui.tabWidget.currentWidget().viewport(): self.popUpTabs(context, x))
+    main_ui.tabWidget.customContextMenuRequested.connect(lambda x, mu=main_ui: tabs_popup(mu, x))
+    # main_ui.connect(main_ui.tabWidget, SIGNAL('customContextMenuRequested(const QPoint &)'), self.popUpTabs)
+    main_ui.tabWidget.currentChanged.connect(lambda x, mu=main_ui: current_tab_changed(mu, x))
+    main_ui.tabWidget.tabCloseRequested.connect(lambda x, mu=main_ui: close_current_tab(mu, x))
+
+    main_ui.changeViewButt.setIcon(QtGui.QIcon(icon_paths["icons"]))
+    main_ui.previousDirButt.setIcon(QtGui.QIcon(icon_paths["prev_dir"]))
+    main_ui.changeDirButt.setIcon(QtGui.QIcon(icon_paths["go"]))
+    main_ui.searchButt.setIcon(QtGui.QIcon(icon_paths["search"]))
+    main_ui.homeButt.setIcon(QtGui.QIcon(icon_paths["home"]))
+    main_ui.themeButt.setIcon(QtGui.QIcon(icon_paths["light"]))
+
+    main_ui.currentFolderBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(icon_paths["clear"]))
+    main_ui.searchBox.findChild(QtWidgets.QToolButton).setIcon(QtGui.QIcon(icon_paths["clear"]))
+
+    # self.changeViewSc = QShortcut(QKeySequence("Ctrl+V"), self)
+    # self.changeViewSc.activated.connect(self.change_view)
+    QShortcut(QKeySequence("Ctrl+T"), main_ui).activated.connect(lambda mu=main_ui: tab_open_doubleclick(mu))
+    # QShortcut(QKeySequence("Ctrl+W"), main_ui).activated.connect(lambda mu=main_ui, curr_tab_index=main_ui.tabWidget.currentIndex(): close_current_tab(mu, curr_tab_index))
+    QShortcut(QKeySequence("Ctrl+F"), main_ui).activated.connect(main_ui.searchBox.setFocus)
+
+    main_ui.changeViewButt.setShortcut(QtGui.QKeySequence("V"))
+    main_ui.previousDirButt.setShortcut(QtGui.QKeySequence("Backspace"))
+    main_ui.changeDirButt.setShortcut(QtGui.QKeySequence("Return"))
+
+    main_ui.changeViewButt.setToolTip("Change View (V)")
+    main_ui.previousDirButt.setToolTip("Previous Directory (Backspace)")
+    main_ui.changeDirButt.setToolTip("Change Directory (Enter)")
+
+    # main_ui.themeButt.clicked.connect(self.changeTheme)
+    main_ui.homeButt.clicked.connect(lambda x, mu=main_ui: go_home(mu))
+    main_ui.searchBox.textChanged.connect(lambda x, mu=main_ui: search(mu))
+    main_ui.changeViewButt.clicked.connect(lambda x, mu=main_ui: change_view(mu))
+    main_ui.previousDirButt.clicked.connect(lambda x, mu=main_ui: previous_dir(mu))
+    main_ui.changeDirButt.clicked.connect(lambda x, mu=main_ui: change_dir(mu))
+    main_ui.searchButt.clicked.connect(lambda x, mu=main_ui: search(mu))
+
+    main_ui.gifConverterFrame.hide()
+    main_ui.videoDownloaderFrame.hide()
+    main_ui.gifConverterButt.clicked.connect(lambda x, mu=main_ui: show_gif_converter(mu))
+    main_ui.videoDownloaderButt.clicked.connect(lambda x, mu=main_ui: show_video_downloader(mu))
+    main_ui.audioRestartButt.clicked.connect(lambda x: audio_restart())
+    main_ui.fixPenDisplayButt.clicked.connect(lambda x: fix_pen_display())
+    # main_ui.blenderMediaViewerButt.clicked.connect(lambda x: blender_media_viewer())
+    main_ui.gifConvertButt.clicked.connect(lambda x, mu=main_ui: convert_to_gif(mu))
+    main_ui.downloadButt.clicked.connect(lambda x, mu=main_ui: download_video(mu))
+    main_ui.cancelButt.clicked.connect(lambda x, mu=main_ui: cancel_video_download(mu))
+
+    try:
+        current_icon_files.customContextMenuRequested.connect(
+            lambda x, mu=main_ui, context=current_icon_files.viewport(): files_popup(mu, context, x))
+        current_icon_files.doubleClicked.connect(lambda x, mu=main_ui: open_file(mu))
+        current_list_files.customContextMenuRequested.connect(
+            lambda x, mu=main_ui, context=current_list_files.viewport(): files_popup(mu, context, x))
+        current_list_files.doubleClicked.connect(lambda x, mu=main_ui: open_file(mu))
+    except:
+        debug.info(str(sys.exc_info()))
+
+    main_ui.progressBar.hide()
+    main_ui.downloadProgressBar.hide()
+    main_ui.cancelButt.setEnabled(False)
+    main_ui.cancelButt.hide()
+    messages(main_ui, "white", "")
+
+    main_ui.splitter01.setSizes([100, 140])
+    # main_ui.searchButt.hide()
+
+    try:
+        current_list_files.setColumnWidth(0, 660)
+        current_icon_files.hide()
+    except:
+        debug.info(str(sys.exc_info()))
+
+    # main_ui.places_label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
+    # main_ui.places_label.setAlignment(QtCore.Qt.AlignCenter)
+    # main_ui.places_label.setText("<b>Places</b>")
+
+    # main_ui.tools_label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
+    main_ui.tools_label.setAlignment(QtCore.Qt.AlignCenter)
+    main_ui.tools_label.setText("<b>Tools</b>")
+
+    # main_ui.search_label.setStyleSheet(''' QLabel { font-size: 20px; } ''')
+    # main_ui.search_label.setAlignment(QtCore.Qt.AlignCenter)
+    # main_ui.search_label.setText("<b>Search</b>")
+
+    main_ui.searchBox.setFocusPolicy(QtCore.Qt.StrongFocus)
+    main_ui.searchBox.setFocus()
+
+    tab_open_doubleclick(main_ui)
+    QCoreApplication.instance().aboutToQuit.connect(lambda mu=main_ui: stop_threads(mu))
+    # main_ui.showMaximized()
+    # main_ui.update()
+
 
 if __name__ == '__main__':
     setproctitle.setproctitle("FILES")
+    loader = QUiLoader()
     app = QtWidgets.QApplication(sys.argv)
-    window = filesWidget()
-    sys.exit(app.exec_())
+    window = loader.load(main_ui_file, None)
+    files_window(window)
+    window.showMaximized()
+    window.update()
+    sys.exit(app.exec())
+

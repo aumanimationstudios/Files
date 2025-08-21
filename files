@@ -23,7 +23,7 @@ fi
 echo "Loading..."
 source "$DIR"/files-env/bin/activate
 cd "$DIR" || return
-python3 "$DIR"/files_3.py
+python3 "$DIR"/files.py
 cd - || return
 # Fix terminal window
 stty sane
